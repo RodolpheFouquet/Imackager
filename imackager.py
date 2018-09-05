@@ -27,7 +27,9 @@ def add_message():
         print("Transcoding the resolution " + str(resolution))
         args = ["ffmpeg", "-y", "-i", videoFile, "-c:a", "aac",
             "-vf", "scale=-2:"+str(resolution), "-c:v",
-			"libx264", "-bf", "0", "-crf", "22", outputDir + str(resolution) +"_" + videoFile]
+			"libx264", "-bf", "0", "-crf", "22", 
+            outputDir + os.path.splitext(os.path.basename(videoFile))[0]
+            + "_" + str(resolution) +"p.mp4"]
         ret = subprocess.call(args)
         if ret!= 0:
             return "trancoding not ok"
