@@ -1,0 +1,6 @@
+*.mp4
+*.m4s
+__pycache__
+*.xml
+*.mpd
+*.ad
