@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 from flask import Flask, request, jsonify
 app = Flask(__name__)
 
-packagedDir= "packaged/"
+packagedDir= "/var/www/dash/"
 
 class InvalidUsage(Exception):
     status_code = 400
@@ -31,7 +31,7 @@ def handle_invalid_usage(error):
     return response
 
 @app.route("/")
-def hello():
+def home():
     return "Imackager is running fine"
 
 @app.route("/package", methods=["POST"])
@@ -39,8 +39,7 @@ def add_message():
     content = request.json
     resolutions = content["files"]["mainVideo"][0]["transcode"]
     videoFile = content["files"]["mainVideo"][0]["url"]
-    dirName = content["programmeName"] +"/"
-    dirName = dirName.replace(" ", "_")
+    dirName = str(content["assetId"]) +"/"
     outputDir = packagedDir + dirName
     if os.path.isdir(outputDir):
         shutil.rmtree(outputDir)
