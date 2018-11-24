@@ -1,0 +1,30 @@
+{
+  "result": 1,
+  "msg": "Asset 351 Pre-Pack files successfuly requested",
+  "assetId": 351,
+  "programmeName": "Life on Mars",
+  "language": "ca_ES",
+  "files": {
+    "mainVideo": [
+      {
+        "url": "497288-Life_On_Mars-low_20181025-154126.mp4",
+        "description": "Main 360 Video high",
+        "urn:mpeg:dash:role:2011": "main",
+        "transcode": [
+          "1080",
+          "720",
+          "540",
+          "480"
+        ]
+      }
+    ],
+    "signer": [
+      {
+        "url": "./",
+        "description": "Sign Language Catalan",
+        "urn:mpeg:dash:role:2011": "signer",
+        "language": "ca_ES"
+      }
+    ]
+  }
+}

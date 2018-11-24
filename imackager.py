@@ -5,6 +5,7 @@ import os
 import shutil
 import xml.etree.ElementTree as ET
 from flask import Flask, request, jsonify
+import os.path
 app = Flask(__name__)
 
 packagedDir= "/var/www/dash/"
@@ -65,8 +66,45 @@ def add_message():
             raise InvalidUsage('Could not transcode the base video into smaller resolutions', status_code=400)
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
     videos = content["files"]["mainVideo"]
-    audios = content["files"]["audio"]
-    subtitles = content["files"]["subtitle"]
+    audios = []
+    if "audio" in content["files"]:
+        audios = content["files"]["audio"]
+    subtitles = []
+    if "subtitle" in content["files"]:
+        subtitles = content["files"]["subtitle"]
+    signers = []
+    if "signer" in content["files"]:
+        signers = content["files"]["signer"]
+    
+    if len(signers)!=0:
+        for signer in signers:
+            signerFile = signer["url"] + "/index.xml"
+            if not os.path.isfile(signerFile):
+                raise InvalidUsage('The signer language file could not be fetched', status_code=400)
+
+            signerTree=ET.parse(signerFile)
+            signerRoot=signerTree.getroot()
+            segments = signerRoot.find("Segments")
+            for segment in segments:
+                text = segment.find("Text").text
+                if text is None:
+                    text = ""
+                videoFile = segment.find("Video").text
+                tcin = segment.find("TCIN").text
+                tcout = segment.find("TCOUT").text
+                latitude = "0"
+                longitude = "0"
+                if "Latitude" in segment:
+                    latitude = segment.find("Latitude").text
+                if "Longitude" in segment:
+                    longitude = segment.find("Longitude").text
+                duration = segment.find("Duration").text
+
+                print("Text=" + text + " Video=" + videoFile + " TCIN=" + tcin
+                    + " TCOUT=" + tcout + " Latitude=" + latitude
+                    + " Longitude=" + longitude + " Duration=" + duration)
+
+
 
     for video in videos:
         #if audio is muxed, only take the video from it
@@ -75,6 +113,7 @@ def add_message():
             mp4boxArgs = mp4boxArgs + [outputDir + videoBasename + "_" + str(resolution) +"p.mp4"]
     for audio in audios:
         mp4boxArgs = mp4boxArgs + [audio["url"]+"#audio:role="+audio["urn:mpeg:dash:role:2011"]]
+    
     print(mp4boxArgs)
     ret = subprocess.call(mp4boxArgs)
     if ret != 0:
