@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SignLanguage360 lang="ca_ES">
+  <Head>
+    <Id>31</Id>
+    <Title>Life on Mars</Title>
+    <ProgrammeID/>
+    <Comments/>
+    <Fps/>
+  </Head>
+  <Segments>
+    <Segment id="s1">
+      <Text>First test</Text>
+      <Comments/>
+      <Video>video_segment_31_1_0@20181119164930.mp4</Video>
+      <TCIN>00:00:03.040</TCIN>
+      <TCOUT>00:00:30.080</TCOUT>
+      <Latitude>9.60</Latitude>
+      <Longitude>2.60</Longitude>
+      <Duration>27.07</Duration>
+    </Segment>
+    <Segment id="s2">
+      <Text>chunk added 2</Text>
+      <Comments/>
+      <Video>video_segment_31_1_1@20181119165131.mp4</Video>
+      <TCIN>00:00:31.280</TCIN>
+      <TCOUT>00:00:43.960</TCOUT>
+      <Latitude>5.40</Latitude>
+      <Longitude>2.80</Longitude>
+      <Duration>12.67</Duration>
+    </Segment>
+    <Segment id="s3">
+      <Text>chunk added 3</Text>
+      <Comments/>
+      <Video>video_segment_31_1_2@20181119165514.mp4</Video>
+      <TCIN>00:00:44.760</TCIN>
+      <TCOUT>00:00:53.640</TCOUT>
+      <Latitude>-12.20</Latitude>
+      <Longitude>-8.40</Longitude>
+      <Duration>7.30</Duration>
+    </Segment>
+    <Segment id="s4">
+      <Text>chunk added 4</Text>
+      <Comments/>
+      <Video>video_segment_31_1_3@20181119164932.mp4</Video>
+      <TCIN>00:00:53.840</TCIN>
+      <TCOUT>00:01:05.920</TCOUT>
+      <Latitude>-0.80</Latitude>
+      <Longitude>359.60</Longitude>
+      <Duration>12.10</Duration>
+    </Segment>
+    <Segment id="s5">
+      <Text>chunk added 5</Text>
+      <Comments/>
+      <Video>video_segment_31_1_4@20181119164932.mp4</Video>
+      <TCIN>00:01:06.120</TCIN>
+      <TCOUT>00:01:13.560</TCOUT>
+      <Latitude>11.80</Latitude>
+      <Longitude>359.00</Longitude>
+      <Duration>7.46</Duration>
+    </Segment>
+    <Segment id="s6">
+      <Text>chunk added 6</Text>
+      <Comments/>
+      <Video>video_segment_31_1_5@20181119164932.mp4</Video>
+      <TCIN>00:01:13.760</TCIN>
+      <TCOUT>00:01:22.640</TCOUT>
+      <Latitude>-36.80</Latitude>
+      <Longitude>688.00</Longitude>
+      <Duration>7.68</Duration>
+    </Segment>
+    <Segment id="s7">
+      <Text>chunk added 7</Text>
+      <Comments/>
+      <Video>video_segment_31_1_6@20181119164932.mp4</Video>
+      <TCIN>00:01:24.440</TCIN>
+      <TCOUT>00:01:35.840</TCOUT>
+      <Latitude>22.40</Latitude>
+      <Longitude>722.80</Longitude>
+      <Duration>14.21</Duration>
+    </Segment>
+    <Segment id="s8">
+      <Text/>
+      <Comments/>
+      <Video>video_segment_31_8@20181120113224.mp4</Video>
+      <TCIN>00:01:36.520</TCIN>
+      <TCOUT>00:01:49.640</TCOUT>
+      <Duration>13.121</Duration>
+    </Segment>
+  </Segments>
+</SignLanguage360>
