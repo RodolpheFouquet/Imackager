@@ -9,9 +9,13 @@ from flask import Flask, request, jsonify
 import os.path
 import random
 import string
+import json
+from pprint import pprint
+
 app = Flask(__name__)
 
 packagedDir= "/var/www/dash/"
+jsonBDD= "./content.json"
 
 class InvalidUsage(Exception):
     status_code = 400
@@ -98,37 +102,51 @@ def add_message():
     signers = []
     if "signer" in content["files"]:
         signers = content["files"]["signer"]
-    
+    slTranscoded = ""
+    slBasename = ""
     if len(signers)!=0:
-        for signer in signers:
-            signerFile = signer["url"] + "/index.xml"
-            
-            signerFile = download(workdir, signerFile)
-            if not os.path.isfile(signerFile):
-                raise InvalidUsage('The signer language file could not be fetched', status_code=400)
+        #for signer in signers:
+        #Only use the first SL for now
+        signerFile = signers[0]["url"] + "/index.xml"
+        
+        signerFile = download(workdir, signerFile)
+        if not os.path.isfile(signerFile):
+            raise InvalidUsage('The signer language file could not be fetched', status_code=400)
+        signerTree=ET.parse(signerFile)
+        signerRoot=signerTree.getroot()
+        segments = signerRoot.find("Segments")
 
-            signerTree=ET.parse(signerFile)
-            signerRoot=signerTree.getroot()
-            segments = signerRoot.find("Segments")
-            for segment in segments:
-                text = segment.find("Text").text
-                if text is None:
-                    text = ""
-                videoFile = segment.find("Video").text
-                videoFile = download(workdir, signer["url"] +  videoFile)
-                tcin = segment.find("TCIN").text
-                tcout = segment.find("TCOUT").text
-                latitude = "0"
-                longitude = "0"
-                if "Latitude" in segment:
-                    latitude = segment.find("Latitude").text
-                if "Longitude" in segment:
-                    longitude = segment.find("Longitude").text
-                duration = segment.find("Duration").text
+        if len(segments)!=0:
+        #Only use the first segment for now
+        #for segment in segments:
+            segment = segments[0]
+            text = segment.find("Text").text
+            if text is None:
+                text = ""
+            videoFile = segment.find("Video").text
+            videoFile = download(workdir, signers[0]["url"]  +  videoFile)
 
-                print("Text=" + text + " Video=" + videoFile + " TCIN=" + tcin
-                    + " TCOUT=" + tcout + " Latitude=" + latitude
-                    + " Longitude=" + longitude + " Duration=" + duration)
+            basename = os.path.splitext(os.path.basename(videoFile))[0]
+            extension = os.path.splitext(os.path.basename(videoFile))[1]
+            print("Transcoding SL segment" + workdir)
+            slBasename = basename + "."  + extension
+            slTranscoded = outputDir + slBasename
+            args = ["ffmpeg", "-y", "-i", videoFile, "-bf", "0", "-crf", "22", "-c:v",
+                "libx264", "-x264opts", "keyint=50:min-keyint=50:no-scenecut", slTranscoded]
+            ret = subprocess.call(args)
+
+            tcin = segment.find("TCIN").text
+            tcout = segment.find("TCOUT").text
+            latitude = "0"
+            longitude = "0"
+            if "Latitude" in segment:
+                latitude = segment.find("Latitude").text
+            if "Longitude" in segment:
+                longitude = segment.find("Longitude").text
+            duration = segment.find("Duration").text
+            print("Text=" + text + " Video=" + videoFile + " TCIN=" + tcin
+                + " TCOUT=" + tcout + " Latitude=" + latitude
+                + " Longitude=" + longitude + " Duration=" + duration)
 
 
 
@@ -140,6 +158,10 @@ def add_message():
     for audio in audios:
         mp4boxArgs = mp4boxArgs + [audio["url"]+"#audio:role="+audio["urn:mpeg:dash:role:2011"]]
     
+    # Fix once we have all SL segments
+    if slBasename != "":
+        mp4boxArgs = mp4boxArgs + [ outputDir + slBasename + "#video:role=sign"]
+
     print(mp4boxArgs)
     ret = subprocess.call(mp4boxArgs)
     if ret != 0:
@@ -169,5 +191,22 @@ def add_message():
     ET.register_namespace('', "urn:mpeg:dash:schema:mpd:2011")
     tree.write(outputDir + "manifest.mpd", xml_declaration=True)
 
+    with open(jsonBDD) as f:
+        data = json.load(f)
+
+    data["contents"].append({
+        "name": str(len(data["contents"])+1) + ": " + content["programmeName"],
+        "thumbnail": content["keyframe"],
+        "url": "https://imac.gpac-licensing.com/dash/" + dirName + "manifest.mpd",
+        "audioChannels" : 2,
+        "subtitles": [],
+        "signer": [],
+        "ad": [],
+        "ast": []
+    })
+
+
+
+    pprint(data)
     shutil.rmtree(workdir)
     return "ok"

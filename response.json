@@ -1,10 +1,8 @@
 {
-  "result": 1,
-  "msg": "Asset 351 Pre-Pack files successfuly requested",
   "assetId": 351,
   "programmeName": "Life on Mars",
-  "keyframe": "https://imac.gpac-licensing.com/acm_test/instances/keyframes/497288-Life_On_Mars-low_20181025-154126.mp4_10.jpg",
   "language": "ca_ES",
+  "keyframe": "https://imac.gpac-licensing.com/acm_test/instances/keyframes/497288-Life_On_Mars-low_20181025-154126.mp4_10.jpg",
   "files": {
     "mainVideo": [
       {
