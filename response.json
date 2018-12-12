@@ -1,12 +1,12 @@
 {
-  "assetId": 351,
-  "programmeName": "Life on Mars",
-  "language": "ca_ES",
-  "keyframe": "https://imac.gpac-licensing.com/acm_test/instances/keyframes/497288-Life_On_Mars-low_20181025-154126.mp4_10.jpg",
+  "assetId": 357,
+  "programmeName": "Foxfinder 2",
+  "language": "de",
+  "keyframe": "https://imac.gpac-licensing.com/acm_test/instances/keyframes/foxfinder2-low.mp4_10.jpg",
   "files": {
     "mainVideo": [
       {
-        "url": "https://imac.gpac-licensing.com/acm_test/instances/video_hq/497288-Life_On_Mars-low_20181025-154126.mp4",
+        "url": "https://imac.gpac-licensing.com/acm_test/instances/video_hq/foxfinder2.mp4",
         "description": "Main 360 Video high",
         "urn:mpeg:dash:role:2011": "main",
         "transcode": [
@@ -17,12 +17,24 @@
         ]
       }
     ],
-    "signer": [
+    "subtitle": [
       {
-        "url": "https://imac.gpac-licensing.com/acm_test/instances/signedlanguage/31/",
-        "description": "Sign Language Catalan",
-        "urn:mpeg:dash:role:2011": "signer",
-        "language": "ca_ES"
+        "url": "https://imac.gpac-licensing.com/acm_test/instances/subtitle/356_Foxfinder_de_20181211-162824_20181212-174728.xml",
+        "description": "IMSC1.0.1 German Hard of hearing",
+        "urn:mpeg:dash:role:2011": "caption",
+        "language": "de"
+      }
+    ],
+    "audio": [
+      {
+        "url": "https://imac.gpac-licensing.com/acm_test/instances/audiodescription/357_Foxfinder_2_de_VOG_20181211-172302.ad",
+        "description": "Audio Description German VOG",
+        "urn:mpeg:dash:role:2011": "alternate",
+        "audioFormat": "",
+        "ADposition": "",
+        "ADgain": "",
+        "containsAD": "1",
+        "language": "de"
       }
     ]
   }
