@@ -4,8 +4,11 @@ import subprocess
 import os
 import shutil
 import xml.etree.ElementTree as ET
+import urllib.request
 from flask import Flask, request, jsonify
 import os.path
+import random
+import string
 app = Flask(__name__)
 
 packagedDir= "/var/www/dash/"
@@ -25,6 +28,8 @@ class InvalidUsage(Exception):
         rv['message'] = self.message
         return rv
 
+
+
 @app.errorhandler(InvalidUsage)
 def handle_invalid_usage(error):
     response = jsonify(error.to_dict())
@@ -35,8 +40,23 @@ def handle_invalid_usage(error):
 def home():
     return "Imackager is running fine"
 
+
+def download(workdir, url):
+    print("Downloading " + url)
+    basename = os.path.splitext(os.path.basename(url))[0]
+    extension = os.path.splitext(os.path.basename(url))[1]
+    print(basename)
+    print(extension)
+
+    urllib.request.urlretrieve (url, workdir + basename + "."+ extension)
+    print(url + " downloaded")
+    return workdir + basename + "."+ extension
+
+
 @app.route("/package", methods=["POST"])
 def add_message():
+    workdir = "/tmp/" + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)) + "/"
+    os.mkdir(workdir)
     content = request.json
     resolutions = content["files"]["mainVideo"][0]["transcode"]
     videoFile = content["files"]["mainVideo"][0]["url"]
@@ -46,6 +66,9 @@ def add_message():
         shutil.rmtree(outputDir)
     os.mkdir(outputDir)
     videoBasename = os.path.splitext(os.path.basename(videoFile))[0]
+
+    
+    videoFile = download(workdir, videoFile)
 
     args = ["ffmpeg", "-y", "-i", videoFile, "-an", "-c:v",
 			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=50:min-keyint=50:no-scenecut", 
@@ -79,6 +102,8 @@ def add_message():
     if len(signers)!=0:
         for signer in signers:
             signerFile = signer["url"] + "/index.xml"
+            
+            signerFile = download(workdir, signerFile)
             if not os.path.isfile(signerFile):
                 raise InvalidUsage('The signer language file could not be fetched', status_code=400)
 
@@ -90,6 +115,7 @@ def add_message():
                 if text is None:
                     text = ""
                 videoFile = segment.find("Video").text
+                videoFile = download(workdir, signer["url"] +  videoFile)
                 tcin = segment.find("TCIN").text
                 tcout = segment.find("TCOUT").text
                 latitude = "0"
@@ -142,4 +168,6 @@ def add_message():
             item.append(AS)
     ET.register_namespace('', "urn:mpeg:dash:schema:mpd:2011")
     tree.write(outputDir + "manifest.mpd", xml_declaration=True)
+
+    shutil.rmtree(workdir)
     return "ok"
