@@ -10,9 +10,6 @@
         "description": "Main 360 Video high",
         "urn:mpeg:dash:role:2011": "main",
         "transcode": [
-          "1080",
-          "720",
-          "540",
           "480"
         ]
       }

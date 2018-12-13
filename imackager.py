@@ -11,11 +11,15 @@ import random
 import string
 import json
 from pprint import pprint
+from threading import Thread
 
 app = Flask(__name__)
 
 packagedDir= "/var/www/dash/"
-jsonBDD= "./content.json"
+#jsonBDD= "./content.json"
+jsonBDD= "/var/www/html/playertest/content.json"
+#callbackUrl = "http://localhost:5000/test_callback"
+callbackUrl = "https://imac.gpac-licensing.com/acm_test/ws/callbackPackager.php"
 
 class InvalidUsage(Exception):
     status_code = 400
@@ -55,11 +59,21 @@ def download(workdir, url):
     return workdir + basename + "."+ extension
 
 
-@app.route("/package", methods=["POST"])
-def add_message():
+@app.route("/test_callback", methods=["POST"])
+def callback():
+    content = request.json
+    pprint(content)
+    return "ok"
+
+def sendResp(resp):
+    params = json.dumps(resp).encode('utf8')
+    req = urllib.request.Request(callbackUrl, data=params,
+                             headers={'content-type': 'application/json'})
+    response = urllib.request.urlopen(req)
+
+def package(content):
     workdir = "/tmp/" + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)) + "/"
     os.mkdir(workdir)
-    content = request.json
     resolutions = content["files"]["mainVideo"][0]["transcode"]
     videoFile = content["files"]["mainVideo"][0]["url"]
     dirName = str(content["assetId"]) +"/"
@@ -68,7 +82,6 @@ def add_message():
         shutil.rmtree(outputDir)
     os.mkdir(outputDir)
     videoBasename = os.path.splitext(os.path.basename(videoFile))[0]
-
     
     videoFile = download(workdir, videoFile)
 
@@ -76,8 +89,8 @@ def add_message():
 			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=50:min-keyint=50:no-scenecut", 
             outputDir + videoBasename + ".mp4"]
     ret = subprocess.call(args)
-    if ret!= 0:
-        raise InvalidUsage('Could not transcode the base video', status_code=400)
+    if ret!= 0: 
+        sendResp({"result":0, "assetId":content["assetId"], "language": content["language"], "msg": "Could not transcode the base video into smaller resolutions" } )
 
     for resolution in resolutions:
         print("Transcoding the resolution " + str(resolution))
@@ -88,7 +101,8 @@ def add_message():
             + "_" + str(resolution) +"p.mp4"]
         ret = subprocess.call(args)
         if ret!= 0:
-            raise InvalidUsage('Could not transcode the base video into smaller resolutions', status_code=400)
+            sendResp({"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not transcode the base video" } )
+            
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
     videos = content["files"]["mainVideo"]
     audios = []
@@ -109,7 +123,8 @@ def add_message():
         
         signerFile = download(workdir, signerFile)
         if not os.path.isfile(signerFile):
-            raise InvalidUsage('The signer language file could not be fetched', status_code=400)
+            sendResp({"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "The SL couldn't be fetched" } )
+            
         signerTree=ET.parse(signerFile)
         signerRoot=signerTree.getroot()
         segments = signerRoot.find("Segments")
@@ -163,7 +178,8 @@ def add_message():
     print(mp4boxArgs)
     ret = subprocess.call(mp4boxArgs)
     if ret != 0:
-        raise InvalidUsage('Could DASH the assets', status_code=400)
+        sendResp({"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Couldn't DASH the assets" } )
+        
     tree=ET.parse(outputDir + "manifest.mpd")
     root=tree.getroot()
     
@@ -196,7 +212,7 @@ def add_message():
         "name": str(len(data["contents"])+1) + ": " + content["programmeName"],
         "thumbnail": content["keyframe"],
         "url": "https://imac.gpac-licensing.com/dash/" + dirName + "manifest.mpd",
-        "audioChannels" : 2,
+        "audioChannels" : 4,
         "subtitles": [],
         "signer": [],
         "ad": [],
@@ -204,7 +220,17 @@ def add_message():
     })
 
 
-
-    pprint(data)
+    with open(jsonBDD, 'w') as outfile:
+        json.dump(data, outfile)
+        
     shutil.rmtree(workdir)
-    return "ok"
+    
+
+    sendResp({"result":1, "assetId":content["assetId"], "language": content["language"], "msg":  "The content has been successfully packaged" } )
+
+@app.route("/package", methods=["POST"])
+def add_message():
+    content = request.json
+    process = Thread(target=package, args=[content])
+    process.start()
+    return "Packaging started"
