@@ -1,37 +1,35 @@
 {
-  "assetId": 357,
-  "programmeName": "Foxfinder 2",
-  "language": "de",
-  "keyframe": "https://imac.gpac-licensing.com/acm_test/instances/keyframes/foxfinder2-low.mp4_10.jpg",
+  "assetId": 358,
+  "callbackUrl": "http://localhost:5000/test_callback",
+  "programmeName": "Opera Liceu 1 cut",
+  "language": "ca_ES",
+  "keyframe": "https://imac.gpac-licensing.com/acm_test/instances/keyframes/CCMA_OPERALICEU01_H264_1920x1080_STEREOBINAURALAAC_cut-low.mp4_10.jpg",
   "files": {
     "mainVideo": [
       {
-        "url": "https://imac.gpac-licensing.com/acm_test/instances/video_hq/foxfinder2.mp4",
+        "url": "https://imac.gpac-licensing.com/acm_test/instances/video_hq/CCMA_OPERALICEU01_H264_1920x1080_STEREOBINAURALAAC_cut.mp4",
         "description": "Main 360 Video high",
         "urn:mpeg:dash:role:2011": "main",
         "transcode": [
+          "1080",
+          "720",
+          "540",
           "480"
         ]
       }
     ],
     "subtitle": [
       {
-        "url": "https://imac.gpac-licensing.com/acm_test/instances/subtitle/356_Foxfinder_de_20181211-162824_20181212-174728.xml",
-        "description": "IMSC1.0.1 German Hard of hearing",
+        "url": "https://imac.gpac-licensing.com/acm_test/instances/subtitle/CCMA_OPERALICEU01_subtitles_EN_cut_20181214-092836.xml",
+        "description": "IMSC 1.0 English Hard of Hearing",
         "urn:mpeg:dash:role:2011": "caption",
-        "language": "de"
-      }
-    ],
-    "audio": [
+        "language": "en_GB"
+      },
       {
-        "url": "https://imac.gpac-licensing.com/acm_test/instances/audiodescription/357_Foxfinder_2_de_VOG_20181211-172302.ad",
-        "description": "Audio Description German VOG",
-        "urn:mpeg:dash:role:2011": "alternate",
-        "audioFormat": "",
-        "ADposition": "",
-        "ADgain": "",
-        "containsAD": "1",
-        "language": "de"
+        "url": "https://imac.gpac-licensing.com/acm_test/instances/subtitle/CCMA_OPERALICEU01_subtitles_CAT_cut_20181214-093038.xml",
+        "description": "IMSC 1.0 Catalan Hard of Hearing",
+        "urn:mpeg:dash:role:2011": "caption",
+        "language": "ca_ES"
       }
     ]
   }

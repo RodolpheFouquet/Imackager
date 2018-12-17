@@ -16,10 +16,8 @@ from threading import Thread
 app = Flask(__name__)
 
 packagedDir= "/var/www/dash/"
-#jsonBDD= "./content.json"
-jsonBDD= "/var/www/html/playertest/content.json"
-#callbackUrl = "http://localhost:5000/test_callback"
-callbackUrl = "https://imac.gpac-licensing.com/acm_test/ws/callbackPackager.php"
+jsonBDD= "./content.json"
+#jsonBDD= "/var/www/html/playertest/content.json"
 
 class InvalidUsage(Exception):
     status_code = 400
@@ -65,11 +63,23 @@ def callback():
     pprint(content)
     return "ok"
 
-def sendResp(resp):
+def sendResp(url, resp):
     params = json.dumps(resp).encode('utf8')
-    req = urllib.request.Request(callbackUrl, data=params,
+    req = urllib.request.Request(url, data=params,
                              headers={'content-type': 'application/json'})
     response = urllib.request.urlopen(req)
+
+def mapLang(lang):
+    if lang.startswith( 'ca_' ):
+        return "cat"
+    if lang.startswith( 'en_' ):
+        return "eng"
+    if lang.startswith( 'de_' ):
+        return "ger"
+    if lang.startswith( 'es_' ):
+        return "esp"
+    else:
+        return lang
 
 def package(content):
     workdir = "/tmp/" + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)) + "/"
@@ -90,7 +100,8 @@ def package(content):
             outputDir + videoBasename + ".mp4"]
     ret = subprocess.call(args)
     if ret!= 0: 
-        sendResp({"result":0, "assetId":content["assetId"], "language": content["language"], "msg": "Could not transcode the base video into smaller resolutions" } )
+        shutil.rmtree(workdir)
+        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg": "Could not transcode the base video into smaller resolutions" } )
 
     for resolution in resolutions:
         print("Transcoding the resolution " + str(resolution))
@@ -101,7 +112,8 @@ def package(content):
             + "_" + str(resolution) +"p.mp4"]
         ret = subprocess.call(args)
         if ret!= 0:
-            sendResp({"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not transcode the base video" } )
+            shutil.rmtree(workdir)
+            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": mapLang(content["language"]), "msg":  "Could not transcode the base video" } )
             
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
     videos = content["files"]["mainVideo"]
@@ -123,7 +135,8 @@ def package(content):
         
         signerFile = download(workdir, signerFile)
         if not os.path.isfile(signerFile):
-            sendResp({"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "The SL couldn't be fetched" } )
+            shutil.rmtree(workdir)
+            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": mapLang(content["language"]), "msg":  "The SL couldn't be fetched" } )
             
         signerTree=ET.parse(signerFile)
         signerRoot=signerTree.getroot()
@@ -174,11 +187,14 @@ def package(content):
     # Fix once we have all SL segments
     if slBasename != "":
         mp4boxArgs = mp4boxArgs + [ outputDir + slBasename + "#video:role=sign"]
-
+    if os.path.isfile(outputDir + videoBasename):
+        print("Video exists")
     print(mp4boxArgs)
+    
     ret = subprocess.call(mp4boxArgs)
     if ret != 0:
-        sendResp({"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Couldn't DASH the assets" } )
+        shutil.rmtree(workdir)
+        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": mapLang(content["language"]), "msg":  "Couldn't DASH the assets" } )
         
     tree=ET.parse(outputDir + "manifest.mpd")
     root=tree.getroot()
@@ -189,13 +205,13 @@ def package(content):
             AS.set("contentType", "text")
             AS.set("mimeType","application/ttml+xml")
             AS.set("segmentAlignment", "true")
-            AS.set("lang", sub["language"])
+            AS.set("lang", mapLang(sub["language"]))
             role = ET.Element("Role")
             role.set("schemeIdUri", "urn:mpeg:dash:role:2011")
             role.set("value", "subtitle")
             AS.append(role)
             representation = ET.Element("Representation")
-            representation.set("id", "xml_" + sub["language"] + "_" + str(i))
+            representation.set("id", "xml_" + mapLang(sub["language"]) + "_" + str(i))
             representation.set("bandwidth", "1000")
             BaseURL = ET.Element("BaseURL")
             BaseURL.text = sub["url"]
@@ -224,9 +240,7 @@ def package(content):
         json.dump(data, outfile)
         
     shutil.rmtree(workdir)
-    
-
-    sendResp({"result":1, "assetId":content["assetId"], "language": content["language"], "msg":  "The content has been successfully packaged" } )
+    sendResp(content["callbackUrl"], {"result":1, "assetId":content["assetId"], "language": mapLang(content["language"]), "msg":  "The content has been successfully packaged" } )
 
 @app.route("/package", methods=["POST"])
 def add_message():
