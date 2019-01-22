@@ -113,7 +113,7 @@ def package(content):
         ret = subprocess.call(args)
         if ret!= 0:
             shutil.rmtree(workdir)
-            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": mapLang(content["language"]), "msg":  "Could not transcode the base video" } )
+            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not transcode the base video" } )
             
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
     videos = content["files"]["mainVideo"]
@@ -136,7 +136,7 @@ def package(content):
         signerFile = download(workdir, signerFile)
         if not os.path.isfile(signerFile):
             shutil.rmtree(workdir)
-            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": mapLang(content["language"]), "msg":  "The SL couldn't be fetched" } )
+            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "The SL couldn't be fetched" } )
             
         signerTree=ET.parse(signerFile)
         signerRoot=signerTree.getroot()
@@ -157,7 +157,7 @@ def package(content):
             print("Transcoding SL segment" + workdir)
             slBasename = basename + "."  + extension
             slTranscoded = outputDir + slBasename
-            args = ["ffmpeg", "-y", "-i", videoFile, "-bf", "0", "-crf", "22", "-c:v",
+            args = ["ffmpeg", "-y", "-i", videoFile, "-filter:v", 'crop=ih:ih', "-bf", "0", "-crf", "22", "-c:v",
                 "libx264", "-x264opts", "keyint=50:min-keyint=50:no-scenecut", slTranscoded]
             ret = subprocess.call(args)
 
@@ -194,7 +194,7 @@ def package(content):
     ret = subprocess.call(mp4boxArgs)
     if ret != 0:
         shutil.rmtree(workdir)
-        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": mapLang(content["language"]), "msg":  "Couldn't DASH the assets" } )
+        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Couldn't DASH the assets" } )
         
     tree=ET.parse(outputDir + "manifest.mpd")
     root=tree.getroot()
@@ -240,7 +240,7 @@ def package(content):
         json.dump(data, outfile)
         
     shutil.rmtree(workdir)
-    sendResp(content["callbackUrl"], {"result":1, "assetId":content["assetId"], "language": mapLang(content["language"]), "msg":  "The content has been successfully packaged" } )
+    sendResp(content["callbackUrl"], {"result":1, "assetId":content["assetId"], "language": content["language"], "msg":  "The content has been successfully packaged" } )
 
 @app.route("/package", methods=["POST"])
 def add_message():
