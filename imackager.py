@@ -15,7 +15,7 @@ from threading import Thread
 
 app = Flask(__name__)
 
-packagedDir= "/var/www/dash/"
+packagedDir= "/home/tamareu/Bureau/opera/output"
 jsonBDD= "./content.json"
 #jsonBDD= "/var/www/html/playertest/content.json"
 
@@ -128,51 +128,54 @@ def package(content):
         signers = content["files"]["signer"]
     slTranscoded = ""
     slBasename = ""
+    slBasenames = []
     if len(signers)!=0:
-        #for signer in signers:
-        #Only use the first SL for now
-        signerFile = signers[0]["url"] + "/index.xml"
-        
-        signerFile = download(workdir, signerFile)
-        if not os.path.isfile(signerFile):
-            shutil.rmtree(workdir)
-            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "The SL couldn't be fetched" } )
+        for signer in signers:
+            #for signer in signers:
+            #Only use the first SL for now
+            signerFile = signer["url"] + "/index.xml"
             
-        signerTree=ET.parse(signerFile)
-        signerRoot=signerTree.getroot()
-        segments = signerRoot.find("Segments")
+            signerFile = download(workdir, signerFile)
+            if not os.path.isfile(signerFile):
+                shutil.rmtree(workdir)
+                sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "The SL couldn't be fetched" } )
+                
+            signerTree=ET.parse(signerFile)
+            signerRoot=signerTree.getroot()
+            segments = signerRoot.find("Segments")
 
-        if len(segments)!=0:
-        #Only use the first segment for now
-        #for segment in segments:
-            segment = segments[0]
-            text = segment.find("Text").text
-            if text is None:
-                text = ""
-            videoFile = segment.find("Video").text
-            videoFile = download(workdir, signers[0]["url"]  +  videoFile)
+            if len(segments)!=0:
+            #Only use the first segment for now
+            #for segment in segments:
+                segment = segments[0]
+                text = segment.find("Text").text
+                if text is None:
+                    text = ""
+                videoFile = segment.find("Video").text
+                videoFile = download(workdir, signer["url"] +"/" +  videoFile)
 
-            basename = os.path.splitext(os.path.basename(videoFile))[0]
-            extension = os.path.splitext(os.path.basename(videoFile))[1]
-            print("Transcoding SL segment" + workdir)
-            slBasename = basename + "."  + extension
-            slTranscoded = outputDir + slBasename
-            args = ["ffmpeg", "-y", "-i", videoFile, "-filter:v", 'crop=ih:ih', "-bf", "0", "-crf", "22", "-c:v",
-                "libx264", "-x264opts", "keyint=50:min-keyint=50:no-scenecut", slTranscoded]
-            ret = subprocess.call(args)
+                basename = os.path.splitext(os.path.basename(videoFile))[0]
+                extension = os.path.splitext(os.path.basename(videoFile))[1]
+                print("Transcoding SL segment" + workdir)
+                slBasename = basename + "."  + extension
+                slTranscoded = outputDir + slBasename
+                args = ["ffmpeg", "-y", "-i", videoFile, "-filter:v", 'crop=ih:ih', "-bf", "0", "-crf", "22", "-c:v",
+                    "libx264", "-x264opts", "keyint=50:min-keyint=50:no-scenecut", "-an", slTranscoded]
+                ret = subprocess.call(args)
 
-            tcin = segment.find("TCIN").text
-            tcout = segment.find("TCOUT").text
-            latitude = "0"
-            longitude = "0"
-            if "Latitude" in segment:
-                latitude = segment.find("Latitude").text
-            if "Longitude" in segment:
-                longitude = segment.find("Longitude").text
-            duration = segment.find("Duration").text
-            print("Text=" + text + " Video=" + videoFile + " TCIN=" + tcin
-                + " TCOUT=" + tcout + " Latitude=" + latitude
-                + " Longitude=" + longitude + " Duration=" + duration)
+                tcin = segment.find("TCIN").text
+                tcout = segment.find("TCOUT").text
+                latitude = "0"
+                longitude = "0"
+                if "Latitude" in segment:
+                    latitude = segment.find("Latitude").text
+                if "Longitude" in segment:
+                    longitude = segment.find("Longitude").text
+                duration = segment.find("Duration").text
+                slBasenames = slBasenames + [slBasename]
+                print("Text=" + text + " Video=" + videoFile + " TCIN=" + tcin
+                    + " TCOUT=" + tcout + " Latitude=" + latitude
+                    + " Longitude=" + longitude + " Duration=" + duration)
 
 
 
@@ -185,8 +188,9 @@ def package(content):
         mp4boxArgs = mp4boxArgs + [audio["url"]+"#audio:role="+audio["urn:mpeg:dash:role:2011"]]
     
     # Fix once we have all SL segments
-    if slBasename != "":
-        mp4boxArgs = mp4boxArgs + [ outputDir + slBasename + "#video:role=sign"]
+    for sl in slBasenames:
+        if sl != "":
+            mp4boxArgs = mp4boxArgs + [ outputDir + slBasename + "#video:role=sign"]
     if os.path.isfile(outputDir + videoBasename):
         print("Video exists")
     print(mp4boxArgs)
