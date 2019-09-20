@@ -15,9 +15,9 @@ from threading import Thread
 
 app = Flask(__name__)
 
-packagedDir= "/home/tamareu/Bureau/opera/output"
-jsonBDD= "./content.json"
-#jsonBDD= "/var/www/html/playertest/content.json"
+packagedDir= "/var/www/dash/"
+#jsonBDD= "./content.json"
+jsonBDD= "/var/www/html/playertest/content.json"
 
 class InvalidUsage(Exception):
     status_code = 400
@@ -84,8 +84,21 @@ def mapLang(lang):
 def package(content):
     workdir = "/tmp/" + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)) + "/"
     os.mkdir(workdir)
+    print(content)
     resolutions = content["files"]["mainVideo"][0]["transcode"]
     videoFile = content["files"]["mainVideo"][0]["url"]
+
+    if content["language"] == "de":
+        content["language"] = "Deutsch"
+    elif content["language"] == "fr":
+        content["language"] = "Français"
+    elif content["language"] == "ca":
+        content["language"] = "Català"
+    elif content["language"] == "es":
+        content["language"] = "Español"
+    else:
+        content["language"] = "English"
+
     dirName = str(content["assetId"]) +"/"
     outputDir = packagedDir + dirName
     if os.path.isdir(outputDir):
@@ -101,7 +114,7 @@ def package(content):
     ret = subprocess.call(args)
     if ret!= 0: 
         shutil.rmtree(workdir)
-        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg": "Could not transcode the base video into smaller resolutions" } )
+        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg": "Could not transcode the base video into smaller resolutions" } )
 
     for resolution in resolutions:
         print("Transcoding the resolution " + str(resolution))
@@ -113,7 +126,7 @@ def package(content):
         ret = subprocess.call(args)
         if ret!= 0:
             shutil.rmtree(workdir)
-            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not transcode the base video" } )
+            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg":  "Could not transcode the base video" } )
             
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
     videos = content["files"]["mainVideo"]
@@ -128,54 +141,51 @@ def package(content):
         signers = content["files"]["signer"]
     slTranscoded = ""
     slBasename = ""
-    slBasenames = []
     if len(signers)!=0:
-        for signer in signers:
-            #for signer in signers:
-            #Only use the first SL for now
-            signerFile = signer["url"] + "/index.xml"
+        #for signer in signers:
+        #Only use the first SL for now
+        signerFile = signers[0]["url"] + "/index.xml"
+        
+        signerFile = download(workdir, signerFile)
+        if not os.path.isfile(signerFile):
+            shutil.rmtree(workdir)
+            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"],  "language": content["language"], "msg":  "The SL couldn't be fetched" } )
             
-            signerFile = download(workdir, signerFile)
-            if not os.path.isfile(signerFile):
-                shutil.rmtree(workdir)
-                sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "The SL couldn't be fetched" } )
-                
-            signerTree=ET.parse(signerFile)
-            signerRoot=signerTree.getroot()
-            segments = signerRoot.find("Segments")
+        signerTree=ET.parse(signerFile)
+        signerRoot=signerTree.getroot()
+        segments = signerRoot.find("Segments")
 
-            if len(segments)!=0:
-            #Only use the first segment for now
-            #for segment in segments:
-                segment = segments[0]
-                text = segment.find("Text").text
-                if text is None:
-                    text = ""
-                videoFile = segment.find("Video").text
-                videoFile = download(workdir, signer["url"] +"/" +  videoFile)
+        if len(segments)!=0:
+        #Only use the first segment for now
+        #for segment in segments:
+            segment = segments[0]
+            text = segment.find("Text").text
+            if text is None:
+                text = ""
+            videoFile = segment.find("Video").text
+            videoFile = download(workdir, signers[0]["url"]  +  videoFile)
 
-                basename = os.path.splitext(os.path.basename(videoFile))[0]
-                extension = os.path.splitext(os.path.basename(videoFile))[1]
-                print("Transcoding SL segment" + workdir)
-                slBasename = basename + "."  + extension
-                slTranscoded = outputDir + slBasename
-                args = ["ffmpeg", "-y", "-i", videoFile, "-filter:v", 'crop=ih:ih', "-bf", "0", "-crf", "22", "-c:v",
-                    "libx264", "-x264opts", "keyint=50:min-keyint=50:no-scenecut", "-an", slTranscoded]
-                ret = subprocess.call(args)
+            basename = os.path.splitext(os.path.basename(videoFile))[0]
+            extension = os.path.splitext(os.path.basename(videoFile))[1]
+            print("Transcoding SL segment" + workdir)
+            slBasename = basename + "."  + extension
+            slTranscoded = outputDir + slBasename
+            args = ["ffmpeg", "-y", "-i", videoFile, "-filter:v", 'crop=ih:ih', "-bf", "0", "-crf", "22", "-c:v",
+                "libx264", "-x264opts", "keyint=50:min-keyint=50:no-scenecut", slTranscoded]
+            ret = subprocess.call(args)
 
-                tcin = segment.find("TCIN").text
-                tcout = segment.find("TCOUT").text
-                latitude = "0"
-                longitude = "0"
-                if "Latitude" in segment:
-                    latitude = segment.find("Latitude").text
-                if "Longitude" in segment:
-                    longitude = segment.find("Longitude").text
-                duration = segment.find("Duration").text
-                slBasenames = slBasenames + [slBasename]
-                print("Text=" + text + " Video=" + videoFile + " TCIN=" + tcin
-                    + " TCOUT=" + tcout + " Latitude=" + latitude
-                    + " Longitude=" + longitude + " Duration=" + duration)
+            tcin = segment.find("TCIN").text
+            tcout = segment.find("TCOUT").text
+            latitude = "0"
+            longitude = "0"
+            if "Latitude" in segment:
+                latitude = segment.find("Latitude").text
+            if "Longitude" in segment:
+                longitude = segment.find("Longitude").text
+            duration = segment.find("Duration").text
+            print("Text=" + text + " Video=" + videoFile + " TCIN=" + tcin
+                + " TCOUT=" + tcout + " Latitude=" + latitude
+                + " Longitude=" + longitude + " Duration=" + duration)
 
 
 
@@ -188,9 +198,8 @@ def package(content):
         mp4boxArgs = mp4boxArgs + [audio["url"]+"#audio:role="+audio["urn:mpeg:dash:role:2011"]]
     
     # Fix once we have all SL segments
-    for sl in slBasenames:
-        if sl != "":
-            mp4boxArgs = mp4boxArgs + [ outputDir + slBasename + "#video:role=sign"]
+    if slBasename != "":
+        mp4boxArgs = mp4boxArgs + [ outputDir + slBasename + "#video:role=sign"]
     if os.path.isfile(outputDir + videoBasename):
         print("Video exists")
     print(mp4boxArgs)
@@ -198,7 +207,7 @@ def package(content):
     ret = subprocess.call(mp4boxArgs)
     if ret != 0:
         shutil.rmtree(workdir)
-        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Couldn't DASH the assets" } )
+        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg":  "Couldn't DASH the assets" } )
         
     tree=ET.parse(outputDir + "manifest.mpd")
     root=tree.getroot()
@@ -244,7 +253,7 @@ def package(content):
         json.dump(data, outfile)
         
     shutil.rmtree(workdir)
-    sendResp(content["callbackUrl"], {"result":1, "assetId":content["assetId"], "language": content["language"], "msg":  "The content has been successfully packaged" } )
+    sendResp(content["callbackUrl"], {"result":1, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg":  "The content has been successfully packaged" } )
 
 @app.route("/package", methods=["POST"])
 def add_message():
