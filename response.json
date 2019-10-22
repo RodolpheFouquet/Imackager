@@ -7,10 +7,11 @@
   "files": {
     "mainVideo": [
       {
-        "url": "http://0.0.0.0:8000/CCMA_OPERALICEU01_H264_1920x1080_STEREOBINAURALAAC.mp4",
+        "url": "http://127.0.0.1:8000/CCMA_OPERALICEU01_H264_3840x2160_AMBIX1STAAC.mp4",
         "description": "Main 360 Video high",
         "urn:mpeg:dash:role:2011": "main",
         "transcode": [
+          "1440",
           "1080",
           "720",
           "540",
@@ -20,19 +21,19 @@
     ],
     "subtitle": [
       {
-        "url": "http://0.0.0.0:8000/CCMA_OPERALICEU01_subtitles_EN.xml",
+        "url": "http://127.0.0.1:8000/CCMA_OPERALICEU01_subtitles_EN.xml",
         "description": "IMSC 1.0 English Hard of Hearing",
         "urn:mpeg:dash:role:2011": "caption",
         "language": "en_GB"
       },
       {
-        "url": "http://0.0.0.0:8000/CCMA_OPERALICEU01_subtitles_CAT.xml",
+        "url": "http://127.0.0.1:8000/CCMA_OPERALICEU01_subtitles_CAT.xml",
         "description": "IMSC 1.0 Catalan Hard of Hearing",
         "urn:mpeg:dash:role:2011": "caption",
         "language": "ca_ES"
       },
       {
-        "url": "http://0.0.0.0:8000/CCMA_OPERALICEU01_subtitles_DE.xml",
+        "url": "http://127.0.0.1:8000/CCMA_OPERALICEU01_subtitles_DE.xml",
         "description": "IMSC 1.0 German Hard of Hearing",
         "urn:mpeg:dash:role:2011": "caption",
         "language": "de_DE"
@@ -40,25 +41,25 @@
     ],
     "signer": [
       {
-        "url": "http://0.0.0.0:8000/SL_original/en",
+        "url": "http://127.0.0.1:8000/SL_original/en",
         "description": "Sign Language English",
         "urn:mpeg:dash:role:2011": "signer",
         "language": "en_GB"
       },
         {
-        "url": "http://0.0.0.0:8000/SL_original/cat",
+        "url": "http://127.0.0.1:8000/SL_original/cat",
         "description": "Sign Language Catalan",
         "urn:mpeg:dash:role:2011": "signer",
         "language": "ca_ES"
       },
             {
-        "url": "http://0.0.0.0:8000/SL_original/de",
+        "url": "http://127.0.0.1:8000/SL_original/de",
         "description": "Sign Language German",
         "urn:mpeg:dash:role:2011": "signer",
         "language": "de_DE"
       },
             {
-        "url": "http://0.0.0.0:8000/SL_original/es",
+        "url": "http://127.0.0.1:8000/SL_original/es",
         "description": "Sign Language Spanish",
         "urn:mpeg:dash:role:2011": "signer",
         "language": "es_ES"

@@ -5,17 +5,22 @@ import os
 import shutil
 import xml.etree.ElementTree as ET
 import urllib.request
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import os.path
 import random
 import string
 import json
 from pprint import pprint
+from shutil import copyfile
 from threading import Thread
 
 app = Flask(__name__)
 
 packagedDir= "/var/www/dash/"
+<<<<<<< HEAD
+=======
+#packagedDir= "dash/"
+>>>>>>> Fixing the main audio
 #jsonBDD= "./content.json"
 jsonBDD= "/var/www/html/playertest/content.json"
 
@@ -35,6 +40,9 @@ class InvalidUsage(Exception):
         return rv
 
 
+@app.route('/dash/<path:path>')
+def send_js(path):
+    return send_from_directory('dash', path)
 
 @app.errorhandler(InvalidUsage)
 def handle_invalid_usage(error):
@@ -48,13 +56,22 @@ def home():
 
 
 def download(workdir, url):
-    print("Downloading " + url)
-    basename = os.path.splitext(os.path.basename(url))[0]
-    extension = os.path.splitext(os.path.basename(url))[1]
+    if (url.startswith('http://')) or (url.startswith('https://')):
+        print("Downloading " + url)
+        basename = os.path.splitext(os.path.basename(url))[0]
+        extension = os.path.splitext(os.path.basename(url))[1]
 
-    urllib.request.urlretrieve (url, workdir + basename + "."+ extension)
-    print(url + " downloaded")
-    return workdir + basename + "."+ extension
+        urllib.request.urlretrieve (url, workdir + basename + "."+ extension)
+        print(url + " downloaded")
+        return workdir + basename + "."+ extension
+    else: 
+        print("Copying " + url)
+        basename = os.path.splitext(os.path.basename(url))[0]
+        extension = os.path.splitext(os.path.basename(url))[1]
+
+        copyfile(url, workdir + basename + "."+ extension)
+        print(url + " copied")
+        return workdir + basename + "."+ extension
 
 
 @app.route("/test_callback", methods=["POST"])
@@ -130,7 +147,7 @@ def package(content):
             
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
     videos = content["files"]["mainVideo"]
-    audios = []
+    audios = [ {'url': videoFile, 'urn:mpeg:dash:role:2011': 'main'}]
     if "audio" in content["files"]:
         audios = content["files"]["audio"]
     subtitles = []
@@ -202,8 +219,7 @@ def package(content):
         mp4boxArgs = mp4boxArgs + [ outputDir + slBasename + "#video:role=sign"]
     if os.path.isfile(outputDir + videoBasename):
         print("Video exists")
-    print(mp4boxArgs)
-    
+    print(' '.join(mp4boxArgs))
     ret = subprocess.call(mp4boxArgs)
     if ret != 0:
         shutil.rmtree(workdir)
