@@ -61,7 +61,7 @@ def download(workdir, url):
         urllib.request.urlretrieve (url.replace(" ", "%20"), workdir + basename +  extension)
         print(url + " downloaded")
         return workdir + basename + extension
-    else: 
+    else:
         print("Copying " + url)
         basename = os.path.splitext(os.path.basename(url))[0]
         extension = os.path.splitext(os.path.basename(url))[1]
@@ -119,14 +119,14 @@ def package(content):
         shutil.rmtree(outputDir)
     os.mkdir(outputDir)
     videoBasename = os.path.splitext(os.path.basename(videoFile))[0]
-    
+
     videoFile = download(workdir, videoFile)
 
     args = ["ffmpeg", "-y", "-i", videoFile, "-an", "-c:v",
-			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=50:min-keyint=50:no-scenecut", 
+			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=50:min-keyint=50:no-scenecut",
             outputDir + videoBasename + ".mp4"]
     ret = subprocess.call(args)
-    if ret!= 0: 
+    if ret!= 0:
         shutil.rmtree(workdir)
         sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg": "Could not transcode the base video into smaller resolutions" } )
 
@@ -134,14 +134,14 @@ def package(content):
         print("Transcoding the resolution " + str(resolution))
         args = ["ffmpeg", "-y", "-i", videoFile, "-an",
             "-vf", "scale=-2:"+str(resolution), "-c:v",
-			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=50:min-keyint=50:no-scenecut", 
+			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=50:min-keyint=50:no-scenecut",
             outputDir + videoBasename
             + "_" + str(resolution) +"p.mp4"]
         ret = subprocess.call(args)
         if ret!= 0:
             shutil.rmtree(workdir)
             sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg":  "Could not transcode the base video" } )
-            
+
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
     videos = content["files"]["mainVideo"]
     audios = [ {'url': videoFile, 'urn:mpeg:dash:role:2011': 'main'}]
@@ -159,12 +159,12 @@ def package(content):
         #for signer in signers:
         #Only use the first SL for now
         signerFile = signers[0]["url"] + "/index.xml"
-        
+
         signerFile = download(workdir, signerFile)
         if not os.path.isfile(signerFile):
             shutil.rmtree(workdir)
             sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"],  "language": content["language"], "msg":  "The SL couldn't be fetched" } )
-            
+
         signerTree=ET.parse(signerFile)
         signerRoot=signerTree.getroot()
         segments = signerRoot.find("Segments")
@@ -210,7 +210,7 @@ def package(content):
             mp4boxArgs = mp4boxArgs + [outputDir + videoBasename + "_" + str(resolution) +"p.mp4"]
     for audio in audios:
         mp4boxArgs = mp4boxArgs + [audio["url"]+"#audio:role="+audio["urn:mpeg:dash:role:2011"]]
-    
+
     # Fix once we have all SL segments
     if slBasename != "":
         mp4boxArgs = mp4boxArgs + [ outputDir + slBasename + "#video:role=sign"]
@@ -221,10 +221,10 @@ def package(content):
     if ret != 0:
         shutil.rmtree(workdir)
         sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg":  "Couldn't DASH the assets" } )
-        
+
     tree=ET.parse(outputDir + "manifest.mpd")
     root=tree.getroot()
-    
+
     for i, sub in enumerate(subtitles):
         subFile = download(outputDir, sub["url"])
         basename = os.path.splitext(os.path.basename(sub["url"]))[0]
@@ -267,7 +267,7 @@ def package(content):
 
     with open(jsonBDD, 'w') as outfile:
         json.dump(data, outfile)
-        
+
     shutil.rmtree(workdir)
     sendResp(content["callbackUrl"], {"result":1, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg":  "The content has been successfully packaged" } )
 
