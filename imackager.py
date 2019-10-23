@@ -17,10 +17,7 @@ from threading import Thread
 app = Flask(__name__)
 
 packagedDir= "/var/www/dash/"
-<<<<<<< HEAD
-=======
 #packagedDir= "dash/"
->>>>>>> Fixing the main audio
 #jsonBDD= "./content.json"
 jsonBDD= "/var/www/html/playertest/content.json"
 
@@ -61,17 +58,17 @@ def download(workdir, url):
         basename = os.path.splitext(os.path.basename(url))[0]
         extension = os.path.splitext(os.path.basename(url))[1]
 
-        urllib.request.urlretrieve (url, workdir + basename + "."+ extension)
+        urllib.request.urlretrieve (url, workdir + basename +  extension)
         print(url + " downloaded")
-        return workdir + basename + "."+ extension
+        return workdir + basename + extension
     else: 
         print("Copying " + url)
         basename = os.path.splitext(os.path.basename(url))[0]
         extension = os.path.splitext(os.path.basename(url))[1]
 
-        copyfile(url, workdir + basename + "."+ extension)
+        copyfile(url, workdir + basename +  extension)
         print(url + " copied")
-        return workdir + basename + "."+ extension
+        return workdir + basename +  extension
 
 
 @app.route("/test_callback", methods=["POST"])
@@ -229,6 +226,9 @@ def package(content):
     root=tree.getroot()
     
     for i, sub in enumerate(subtitles):
+        subFile = download(outputDir, sub["url"])
+        basename = os.path.splitext(os.path.basename(sub["url"]))[0]
+        extension = os.path.splitext(os.path.basename(sub["url"]))[1]
         for item in root.findall('{urn:mpeg:dash:schema:mpd:2011}Period'):
             AS = ET.Element("AdaptationSet")
             AS.set("contentType", "text")
@@ -243,7 +243,7 @@ def package(content):
             representation.set("id", "xml_" + mapLang(sub["language"]) + "_" + str(i))
             representation.set("bandwidth", "1000")
             BaseURL = ET.Element("BaseURL")
-            BaseURL.text = sub["url"]
+            BaseURL.text = basename + extension
             representation.append(BaseURL)
             AS.append(representation)
             item.append(AS)
