@@ -58,7 +58,7 @@ def download(workdir, url):
         basename = os.path.splitext(os.path.basename(url))[0]
         extension = os.path.splitext(os.path.basename(url))[1]
 
-        urllib.request.urlretrieve (url, workdir + basename +  extension)
+        urllib.request.urlretrieve (url.replace(" ", "%20"), workdir + basename +  extension)
         print(url + " downloaded")
         return workdir + basename + extension
     else: 
