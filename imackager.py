@@ -254,7 +254,7 @@ def package(content):
         data = json.load(f)
 
     data["contents"].append({
-        "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], 
+        "acces":content["acces"], "descriptionArray":content["descriptionArray"], "description":content["description"], 
         "name": str(len(data["contents"])+1) + ": " + content["programmeName"],
         "thumbnail": content["keyframe"],
         "url": "https://imac.gpac-licensing.com/dash/" + dirName + "manifest.mpd",
