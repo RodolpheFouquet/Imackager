@@ -128,7 +128,7 @@ def package(content):
     ret = subprocess.call(args)
     if ret!= 0:
         shutil.rmtree(workdir)
-        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg": "Could not transcode the base video into smaller resolutions" } )
+        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg": "Could not transcode the base video into smaller resolutions" } )
 
     for resolution in resolutions:
         print("Transcoding the resolution " + str(resolution))
@@ -140,7 +140,7 @@ def package(content):
         ret = subprocess.call(args)
         if ret!= 0:
             shutil.rmtree(workdir)
-            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg":  "Could not transcode the base video" } )
+            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not transcode the base video" } )
 
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
     videos = content["files"]["mainVideo"]
@@ -163,7 +163,7 @@ def package(content):
         signerFile = download(workdir, signerFile)
         if not os.path.isfile(signerFile):
             shutil.rmtree(workdir)
-            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"],  "language": content["language"], "msg":  "The SL couldn't be fetched" } )
+            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "The SL couldn't be fetched" } )
 
         signerTree=ET.parse(signerFile)
         signerRoot=signerTree.getroot()
@@ -220,7 +220,7 @@ def package(content):
     ret = subprocess.call(mp4boxArgs)
     if ret != 0:
         shutil.rmtree(workdir)
-        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg":  "Couldn't DASH the assets" } )
+        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Couldn't DASH the assets" } )
 
     tree=ET.parse(outputDir + "manifest.mpd")
     root=tree.getroot()
@@ -254,6 +254,7 @@ def package(content):
         data = json.load(f)
 
     data["contents"].append({
+        "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], 
         "name": str(len(data["contents"])+1) + ": " + content["programmeName"],
         "thumbnail": content["keyframe"],
         "url": "https://imac.gpac-licensing.com/dash/" + dirName + "manifest.mpd",
@@ -269,7 +270,7 @@ def package(content):
         json.dump(data, outfile)
 
     shutil.rmtree(workdir)
-    sendResp(content["callbackUrl"], {"result":1, "assetId":content["assetId"], "acces":content["acces"], "description":content["descriptionArray"], "description":content["description"], "language": content["language"], "msg":  "The content has been successfully packaged" } )
+    sendResp(content["callbackUrl"], {"result":1, "assetId":content["assetId"], "language": content["language"], "msg":  "The content has been successfully packaged" } )
 
 @app.route("/package", methods=["POST"])
 def add_message():
