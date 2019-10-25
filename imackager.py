@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import subprocess
+from xml.dom import minidom
+from xml.dom.minidom import Node
 import os
 import shutil
 import xml.etree.ElementTree as ET
@@ -106,6 +108,13 @@ def mapLang2(lang):
         return "es"
     else:
         return lang
+def remove_blanks(node):
+    for x in node.childNodes:
+        if x.nodeType == Node.TEXT_NODE:
+            if x.nodeValue:
+                x.nodeValue = x.nodeValue.strip()
+        elif x.nodeType == Node.ELEMENT_NODE:
+            remove_blanks(x)
 
 def package(content):
     workdir = "/tmp/" + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)) + "/"
@@ -260,7 +269,12 @@ def package(content):
             AS.append(representation)
             item.append(AS)
     ET.register_namespace('', "urn:mpeg:dash:schema:mpd:2011")
-    tree.write(outputDir + "manifest.mpd", xml_declaration=True)
+    #tree.write(outputDir + "manifest.mpd", xml_declaration=True)
+    with open(outputDir+ "manifest.mpd", "w") as xmlfile:
+        x = minidom.parseString(ET.tostring(root))
+        remove_blanks(x)
+        x.normalize()
+        xmlfile.write(x.toprettyxml(indent="  "))
 
     with open(jsonBDD) as f:
         data = json.load(f)

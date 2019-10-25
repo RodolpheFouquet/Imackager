@@ -658,6 +658,54 @@
       "signer": [],
       "ad": [],
       "ast": []
+    },
+    {
+      "acces": {
+        "ST": [
+          "de"
+        ]
+      },
+      "descriptionArray": {
+        "es_ES": "",
+        "de": ""
+      },
+      "description": "lol",
+      "name": "40: RBB Crime Scene",
+      "thumbnail": "RBB_CrimeScene_H264_4K_audio_stereo-low.mp4_10.jpg",
+      "url": "https://imac.gpac-licensing.com/dash/817/manifest.mpd",
+      "audioChannels": 4,
+      "subtitles": [
+        {
+          "de": "https://imac.gpac-licensing.com/dash/817//RBB_CrimeScene_subtitles_DE_20190902-133824.xml"
+        }
+      ],
+      "signer": [],
+      "ad": [],
+      "ast": []
+    },
+    {
+      "acces": {
+        "ST": [
+          "de"
+        ]
+      },
+      "descriptionArray": {
+        "es_ES": "",
+        "de": ""
+      },
+      "description": "lol",
+      "name": "41: RBB Crime Scene",
+      "thumbnail": "RBB_CrimeScene_H264_4K_audio_stereo-low.mp4_10.jpg",
+      "url": "https://imac.gpac-licensing.com/dash/817/manifest.mpd",
+      "audioChannels": 4,
+      "subtitles": [
+        {
+          "de": "https://imac.gpac-licensing.com/dash/817//RBB_CrimeScene_subtitles_DE_20190902-133824.xml"
+        }
+      ],
+      "signer": [],
+      "ad": [],
+      "ast": []
     }
   ]
 }
