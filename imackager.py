@@ -16,10 +16,10 @@ from threading import Thread
 
 app = Flask(__name__)
 
-packagedDir= "/var/www/dash/"
-#packagedDir= "dash/"
-#jsonBDD= "./content.json"
-jsonBDD= "/var/www/html/playertest/content.json"
+#packagedDir= "/var/www/dash/"
+packagedDir= "dash/"
+jsonBDD= "./content.json"
+#jsonBDD= "/var/www/html/playertest/content.json"
 
 class InvalidUsage(Exception):
     status_code = 400
@@ -89,9 +89,21 @@ def mapLang(lang):
     if lang.startswith( 'en_' ):
         return "eng"
     if lang.startswith( 'de_' ):
-        return "ger"
+        return "deu"
     if lang.startswith( 'es_' ):
         return "esp"
+    else:
+        return lang
+
+def mapLang2(lang):
+    if lang.startswith( 'ca_' ):
+        return "ca"
+    if lang.startswith( 'en_' ):
+        return "en"
+    if lang.startswith( 'de_' ):
+        return "de"
+    if lang.startswith( 'es_' ):
+        return "es"
     else:
         return lang
 
@@ -252,6 +264,13 @@ def package(content):
 
     with open(jsonBDD) as f:
         data = json.load(f)
+    subs = [dict()]
+    for acc in content["acces"]["ST"]:
+        for s in subtitles:
+            if s["language"] == acc:
+                base = os.path.splitext(os.path.basename(s["url"]))[0]
+                ext = os.path.splitext(os.path.basename(s["url"]))[1]
+                subs[0][acc]= "https://imac.gpac-licensing.com/dash/" + dirName +"/"+base+ext 
 
     data["contents"].append({
         "acces":content["acces"], "descriptionArray":content["descriptionArray"], "description":content["description"], 
@@ -259,7 +278,7 @@ def package(content):
         "thumbnail": content["keyframe"],
         "url": "https://imac.gpac-licensing.com/dash/" + dirName + "manifest.mpd",
         "audioChannels" : 4,
-        "subtitles": [],
+        "subtitles": subs,
         "signer": [],
         "ad": [],
         "ast": []
@@ -267,7 +286,7 @@ def package(content):
 
 
     with open(jsonBDD, 'w') as outfile:
-        json.dump(data, outfile)
+        json.dump(data, outfile, indent=2)
 
     shutil.rmtree(workdir)
     sendResp(content["callbackUrl"], {"result":1, "assetId":content["assetId"], "language": content["language"], "msg":  "The content has been successfully packaged" } )
