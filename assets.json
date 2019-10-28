@@ -48,7 +48,7 @@
 		],
 		"signer": [
 			{
-				"url": "https://imac.gpac-licensing.com/acm_test/instances/signedlanguage/118/",
+				"url": "./",
 				"description": "Sign Language German",
 				"urn:mpeg:dash:role:2011": "signer",
 				"language": "de_DE"

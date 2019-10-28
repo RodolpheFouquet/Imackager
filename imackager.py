@@ -116,6 +116,10 @@ def remove_blanks(node):
         elif x.nodeType == Node.ELEMENT_NODE:
             remove_blanks(x)
 
+def tcToMilliseconds(timecode):
+    comps = timecode.split(':')
+    return int(comps[0])*3600000+ int(comps[1])*60000 + float(comps[2])*1000
+
 def package(content):
     workdir = "/tmp/" + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)) + "/"
     os.mkdir(workdir)
@@ -144,7 +148,7 @@ def package(content):
     videoFile = download(workdir, videoFile)
 
     args = ["ffmpeg", "-y", "-i", videoFile, "-an", "-c:v",
-			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=50:min-keyint=50:no-scenecut",
+			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=60:min-keyint=60:no-scenecut",
             outputDir + videoBasename + ".mp4"]
     ret = subprocess.call(args)
     if ret!= 0:
@@ -155,7 +159,7 @@ def package(content):
         print("Transcoding the resolution " + str(resolution))
         args = ["ffmpeg", "-y", "-i", videoFile, "-an",
             "-vf", "scale=-2:"+str(resolution), "-c:v",
-			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=50:min-keyint=50:no-scenecut",
+			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=60:min-keyint=60:no-scenecut",
             outputDir + videoBasename
             + "_" + str(resolution) +"p.mp4"]
         ret = subprocess.call(args)
@@ -174,12 +178,11 @@ def package(content):
     signers = []
     if "signer" in content["files"]:
         signers = content["files"]["signer"]
-    slTranscoded = ""
-    slBasename = ""
-    if len(signers)!=0:
+    sls = []
+    for signer in signers:
         #for signer in signers:
         #Only use the first SL for now
-        signerFile = signers[0]["url"] + "/index.xml"
+        signerFile = signer["url"] + "/index.xml"
 
         signerFile = download(workdir, signerFile)
         if not os.path.isfile(signerFile):
@@ -188,41 +191,50 @@ def package(content):
 
         signerTree=ET.parse(signerFile)
         signerRoot=signerTree.getroot()
-        segments = signerRoot.find("Segments")
 
-        if len(segments)!=0:
-        #Only use the first segment for now
-        #for segment in segments:
-            segment = segments[0]
-            text = segment.find("Text").text
-            if text is None:
-                text = ""
-            videoFile = segment.find("Video").text
-            videoFile = download(workdir, signers[0]["url"]  +  videoFile)
+        slVids = []
 
-            basename = os.path.splitext(os.path.basename(videoFile))[0]
-            extension = os.path.splitext(os.path.basename(videoFile))[1]
-            print("Transcoding SL segment" + workdir)
-            slBasename = basename + "."  + extension
-            slTranscoded = outputDir + slBasename
-            args = ["ffmpeg", "-y", "-i", videoFile, "-filter:v", 'crop=ih:ih', "-bf", "0", "-crf", "22", "-c:v",
-                "libx264", "-x264opts", "keyint=50:min-keyint=50:no-scenecut", slTranscoded]
+        for el in signerRoot.iter():
+            if el.tag == "video":
+                vid = download(workdir,  signer["url"] +  el.get("src"))
+                slVids = slVids + [{"id" : el.get("{http://www.w3.org/XML/1998/namespace}id"), "begin": el.get("begin"), "end": el.get("end"), "file": vid}]
+                #suppose we are at 600x600
+        print(slVids)
+
+
+        segments = []
+        for el in signerRoot.findall(".//{http://www.w3.org/ns/ttml}body/{http://www.imac-project.eu}slSegments/{http://www.w3.org/ns/ttml}div/{http://www.w3.org/ns/ttml}p"):
+            if el.tag == "{http://www.w3.org/ns/ttml}p":
+                f = workdir +  el.get("{http://www.w3.org/XML/1998/namespace}id") + ".mp4"
+                segments = segments + [{"id" : el.get("{http://www.w3.org/XML/1998/namespace}id"), "begin": el.get("begin"), "end": el.get("end"), "file": f}]
+                # transcoding so we are frame accurate
+        
+        #TODO: trim if diff < threshold
+        for i in range(len(segments)):
+            args = ["ffmpeg", "-y", "-i", slVids[0]["file"], "-ss",  segments[i]["begin"], "-to", segments[i]["end"],  "-filter:v", 'crop=ih:ih,scale=300:300', "-bf", "0", "-crf", "22", "-c:v",
+            "libx264", "-x264opts", "keyint=60:min-keyint=60:no-scenecut", "-an", segments[i]["file"]]
             ret = subprocess.call(args)
+        blanks = []
+        for i in range(len(segments)):
+            if i < len(segments)-1:
+                duration = (tcToMilliseconds(segments[i+1]["begin"]) - tcToMilliseconds(segments[i]["end"]))/1000.0
+                blank = workdir + segments[i]["id"] + "_" + segments[i+1]["id"] + ".mp4"
+                blanks = blanks + [blank]
+                args = ["ffmpeg", "-t", str(duration), '-f', 'lavfi', '-i', 'color=c=black:s=300x300', '-c:v', 'libx264', '-tune', 'stillimage', '-pix_fmt', 'yuv420p', blank]
+                ret = subprocess.call(args)
 
-            tcin = segment.find("TCIN").text
-            tcout = segment.find("TCOUT").text
-            latitude = "0"
-            longitude = "0"
-            if "Latitude" in segment:
-                latitude = segment.find("Latitude").text
-            if "Longitude" in segment:
-                longitude = segment.find("Longitude").text
-            duration = segment.find("Duration").text
-            print("Text=" + text + " Video=" + videoFile + " TCIN=" + tcin
-                + " TCOUT=" + tcout + " Latitude=" + latitude
-                + " Longitude=" + longitude + " Duration=" + duration)
+        playlist = "# playlist to concatenate"
+        for i in range(len(segments)): 
+            playlist = playlist+ "\n file '" + segments[i]["file"] +"'"
+            if i < len(segments)-1:
+                playlist = playlist + "\n file '" + blanks[i] +"'"
 
-
+        with open(workdir + "/list.txt", "w") as f:
+            f.write(playlist)
+        outsl = workdir + "/sl"  + signer["language"] +".mp4"
+        args = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", workdir + "/list.txt", "-bf", "0",  "-b:v", "500k", "-minrate", "500k", "-maxrate", "500k",  "-c:v","libx264", "-x264opts", "keyint=60:min-keyint=60:no-scenecut", "-an", outsl]
+        ret = subprocess.call(args)
+        sls = sls + [{"file": outsl, "role": signer["role"], "language": signer["language"]}]
 
     for video in videos:
         #if audio is muxed, only take the video from it
@@ -233,8 +245,8 @@ def package(content):
         mp4boxArgs = mp4boxArgs + [audio["url"]+"#audio:role="+audio["urn:mpeg:dash:role:2011"]]
 
     # Fix once we have all SL segments
-    if slBasename != "":
-        mp4boxArgs = mp4boxArgs + [ outputDir + slBasename + "#video:role=sign"]
+    for sl in sls:
+        mp4boxArgs = mp4boxArgs + [ sl["file"] "#video:role="+ sl["role"]]
     if os.path.isfile(outputDir + videoBasename):
         print("Video exists")
     print(' '.join(mp4boxArgs))
@@ -285,6 +297,15 @@ def package(content):
                 base = os.path.splitext(os.path.basename(s["url"]))[0]
                 ext = os.path.splitext(os.path.basename(s["url"]))[1]
                 subs[0][acc]= "https://imac.gpac-licensing.com/dash/" + dirName +"/"+base+ext 
+
+    for acc in content["acces"]["ST"]:
+        for s in subtitles:
+            if s["language"] == acc:
+                base = os.path.splitext(os.path.basename(s["url"]))[0]
+                ext = os.path.splitext(os.path.basename(s["url"]))[1]
+                subs[0][acc]= "https://imac.gpac-licensing.com/dash/" + dirName +"/"+base+ext 
+
+
 
     data["contents"].append({
         "acces":content["acces"], "descriptionArray":content["descriptionArray"], "description":content["description"], 
