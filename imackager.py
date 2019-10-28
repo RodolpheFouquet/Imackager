@@ -246,7 +246,7 @@ def package(content):
 
     # Fix once we have all SL segments
     for sl in sls:
-        mp4boxArgs = mp4boxArgs + [ sl["file"] "#video:role="+ sl["role"]]
+        mp4boxArgs = mp4boxArgs + [ sl["file"] + "#video:role="+ sl["role"]]
     if os.path.isfile(outputDir + videoBasename):
         print("Video exists")
     print(' '.join(mp4boxArgs))
