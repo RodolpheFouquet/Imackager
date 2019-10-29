@@ -308,7 +308,7 @@ def package(content):
 
 
     data["contents"].append({
-        "acces":content["acces"], "descriptionArray":content["descriptionArray"], , 
+        "acces":content["acces"], "descriptionArray":content["descriptionArray"],
         "name": str(len(data["contents"])+1) + ": " + content["programmeName"],
         "thumbnail": content["keyframe"],
         "url": "https://imac.gpac-licensing.com/dash/" + dirName + "manifest.mpd",
