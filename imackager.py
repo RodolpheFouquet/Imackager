@@ -18,10 +18,10 @@ from threading import Thread
 
 app = Flask(__name__)
 
-#packagedDir= "/var/www/dash/"
-packagedDir= "dash/"
-jsonBDD= "./content.json"
-#jsonBDD= "/var/www/html/playertest/content.json"
+packagedDir= "/var/www/dash/"
+#packagedDir= "dash/"
+#jsonBDD= "./content.json"
+jsonBDD= "/var/www/html/playertest/content.json"
 
 class InvalidUsage(Exception):
     status_code = 400
@@ -308,7 +308,7 @@ def package(content):
 
 
     data["contents"].append({
-        "acces":content["acces"], "descriptionArray":content["descriptionArray"], "description":content["description"], 
+        "acces":content["acces"], "descriptionArray":content["descriptionArray"], , 
         "name": str(len(data["contents"])+1) + ": " + content["programmeName"],
         "thumbnail": content["keyframe"],
         "url": "https://imac.gpac-licensing.com/dash/" + dirName + "manifest.mpd",
