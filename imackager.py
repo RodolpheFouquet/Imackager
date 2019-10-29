@@ -234,7 +234,7 @@ def package(content):
         outsl = workdir + "/sl"  + signer["language"] +".mp4"
         args = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", workdir + "/list.txt", "-bf", "0",  "-b:v", "500k", "-minrate", "500k", "-maxrate", "500k",  "-c:v","libx264", "-x264opts", "keyint=60:min-keyint=60:no-scenecut", "-an", outsl]
         ret = subprocess.call(args)
-        sls = sls + [{"file": outsl, "role": signer["role"], "language": signer["language"]}]
+        sls = sls + [{"file": outsl, "role": signer["urn:mpeg:dash:role:2011"], "language": signer["language"]}]
 
     for video in videos:
         #if audio is muxed, only take the video from it
