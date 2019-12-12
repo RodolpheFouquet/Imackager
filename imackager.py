@@ -182,7 +182,9 @@ def package(content):
     videos = content["files"]["mainVideo"]
     audios = [ {'url': videoFile, 'urn:mpeg:dash:role:2011': 'main'}]
     if "audio" in content["files"]:
-        audios = audios + content["files"]["audio"]
+        for a in content["files"]["audio"]:
+            if a["urn:mpeg:dash:role:2011"] == "main":
+                audios = audios + [a]
     subtitles = []
     if "subtitle" in content["files"]:
         subtitles = content["files"]["subtitle"]
