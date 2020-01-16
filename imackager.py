@@ -297,7 +297,7 @@ def package(content):
             AS.set("lang", mapLang(sub["language"]))
             role = ET.Element("Role")
             role.set("schemeIdUri", "urn:mpeg:dash:role:2011")
-            role.set("value", sub["urn:mpeg:dash:role:2011"])
+            role.set("value", "caption") #until fixed in the ACM
             AS.append(role)
             representation = ET.Element("Representation")
             representation.set("id", "xml_" + mapLang(sub["language"]) + "_" + str(i))
