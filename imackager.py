@@ -158,9 +158,11 @@ def package(content):
 
     videoFile = download(workdir, videoFile)
 
-    args = ["ffmpeg", "-y", "-i", videoFile, "-an", "-c:v",
-			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=60:min-keyint=60:no-scenecut",
-            outputDir + videoBasename + ".mp4"]
+    args = ["ffmpeg", "-y", "-i", videoFile, "-an", "-vf", "scale=-2:1920,fps=fps=30", "-c:v",
+			"libx264", "-bf", "0", "-crf", "22", "-keyint_min", "60", "-g", "60", "-sc_threshold", "0", "-write_tmcd", "0",
+            outputDir + videoBasename + "_1920.mp4"]
+
+
     ret = subprocess.call(args)
     if ret!= 0:
         shutil.rmtree(workdir)
@@ -169,8 +171,8 @@ def package(content):
     for resolution in resolutions:
         print("Transcoding the resolution " + str(resolution))
         args = ["ffmpeg", "-y", "-i", videoFile, "-an",
-            "-vf", "scale=-2:"+str(resolution), "-c:v",
-			"libx264", "-bf", "0", "-crf", "22", "-x264opts", "keyint=60:min-keyint=60:no-scenecut",
+            "-vf", "scale=-2:"+str(resolution)+",fps=fps=30", "-c:v",
+			"libx264", "-bf", "0", "-crf", "22", "-keyint_min", "60", "-g", "60", "-sc_threshold", "0","-write_tmcd", "0",
             outputDir + videoBasename
             + "_" + str(resolution) +"p.mp4"]
         ret = subprocess.call(args)
@@ -180,6 +182,8 @@ def package(content):
 
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
     videos = content["files"]["mainVideo"]
+    videos[0]["url"] = outputDir + videoBasename + "_1920.mp4"
+
     audios = [ {'url': videoFile, 'urn:mpeg:dash:role:2011': 'main'}]
     if "audio" in content["files"]:
         for a in content["files"]["audio"]:
@@ -212,7 +216,6 @@ def package(content):
                 vid = download(workdir,  signer["url"] +  el.get("src"))
                 slVids = slVids + [{"id" : el.get("{http://www.w3.org/XML/1998/namespace}id"), "begin": el.get("begin"), "end": el.get("end"), "file": vid}]
                 #suppose we are at 600x600
-        print(slVids)
 
 
         segments = []
@@ -224,8 +227,8 @@ def package(content):
         
         #TODO: trim if diff < threshold
         for i in range(len(segments)):
-            args = ["ffmpeg", "-y", "-i", slVids[0]["file"], "-ss",  segments[i]["begin"], "-to", segments[i]["end"],  "-filter:v", 'crop=ih:ih,scale=300:300', "-bf", "0", "-crf", "22", "-c:v",
-            "libx264", "-x264opts", "keyint=60:min-keyint=60:no-scenecut", "-an", segments[i]["file"]]
+            args = ["ffmpeg", "-y", "-i", slVids[0]["file"], "-ss",  segments[i]["begin"], "-to", segments[i]["end"],  "-filter:v", 'crop=ih:ih,scale=300:300,fps=fps=30', "-bf", "0", "-crf", "22", "-c:v",
+            "libx264", "-keyint_min", "60", "-g", "60", "-sc_threshold", "0","-write_tmcd", "0", "-an", segments[i]["file"]]
             ret = subprocess.call(args)
         blanks = []
         for i in range(len(segments)):
@@ -233,7 +236,7 @@ def package(content):
                 duration = (tcToMilliseconds(segments[i+1]["begin"]) - tcToMilliseconds(segments[i]["end"]))/1000.0
                 blank = workdir + segments[i]["id"] + "_" + segments[i+1]["id"] + ".mp4"
                 blanks = blanks + [blank]
-                args = ["ffmpeg", "-t", str(duration), '-f', 'lavfi', '-i', 'color=c=black:s=300x300', '-c:v', 'libx264', '-tune', 'stillimage', '-pix_fmt', 'yuv420p', blank]
+                args = ["ffmpeg", "-t", str(duration), '-f', 'lavfi', '-i', 'color=c=black:s=300x300:rate=30', '-c:v', 'libx264', '-tune', 'stillimage', '-pix_fmt', 'yuv420p', blank]
                 ret = subprocess.call(args)
 
         playlist = "# playlist to concatenate"
@@ -245,15 +248,16 @@ def package(content):
         with open(workdir + "/list.txt", "w") as f:
             f.write(playlist)
         outsl = workdir + "/sl"  + signer["language"] +".mp4"
-        args = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", workdir + "/list.txt", "-bf", "0",  "-b:v", "500k", "-minrate", "500k", "-maxrate", "500k",  "-c:v","libx264", "-x264opts", "keyint=60:min-keyint=60:no-scenecut", "-an", outsl]
+        args = ["ffmpeg", "-f", "concat", "-safe", "0", "-i", workdir + "/list.txt", "-bf", "0",  "-b:v", "500k", "-minrate", "500k", "-maxrate", "500k",  "-c:v","libx264", "-keyint_min", "60", "-g", "60", "-sc_threshold", "0","-write_tmcd", "0", "-an", outsl]
         ret = subprocess.call(args)
         sls = sls + [{"file": outsl, "role": signer["urn:mpeg:dash:role:2011"], "language": signer["language"]}]
 
-    for video in videos:
-        #if audio is muxed, only take the video from it
-        mp4boxArgs = mp4boxArgs + [outputDir + videoBasename + ".mp4#video:role="+video["urn:mpeg:dash:role:2011"]]
-        for resolution in resolutions:
-            mp4boxArgs = mp4boxArgs + [outputDir + videoBasename + "_" + str(resolution) +"p.mp4"]
+    
+    #if audio is muxed, only take the video from it
+    mp4boxArgs = mp4boxArgs + [videos[0]["url"] + "#video:role=main"]
+    for resolution in resolutions:
+        mp4boxArgs = mp4boxArgs + [outputDir + videoBasename + "_" + str(resolution) +"p.mp4#video:role=main"]
+    
     for audio in audios:
         f = download(outputDir, audio["url"])
         if f.endswith(".aac"):
