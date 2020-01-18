@@ -157,17 +157,6 @@ def package(content):
     videoBasename = os.path.splitext(os.path.basename(videoFile))[0]
 
     videoFile = download(workdir, videoFile)
-
-    args = ["ffmpeg", "-y", "-i", videoFile, "-an", "-vf", "scale=-2:1920,fps=fps=30", "-c:v",
-			"libx264", "-bf", "0", "-crf", "22", "-keyint_min", "60", "-g", "60", "-sc_threshold", "0", "-write_tmcd", "0",
-            outputDir + videoBasename + "_1920.mp4"]
-
-
-    ret = subprocess.call(args)
-    if ret!= 0:
-        shutil.rmtree(workdir)
-        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg": "Could not transcode the base video into smaller resolutions" } )
-
     for resolution in resolutions:
         print("Transcoding the resolution " + str(resolution))
         args = ["ffmpeg", "-y", "-i", videoFile, "-an",
@@ -181,8 +170,6 @@ def package(content):
             sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not transcode the base video" } )
 
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
-    videos = content["files"]["mainVideo"]
-    videos[0]["url"] = outputDir + videoBasename + "_1920.mp4"
 
     audios = [ {'url': videoFile, 'urn:mpeg:dash:role:2011': 'main'}]
     if "audio" in content["files"]:
@@ -254,7 +241,7 @@ def package(content):
 
     
     #if audio is muxed, only take the video from it
-    mp4boxArgs = mp4boxArgs + [videos[0]["url"] + "#video:role=main"]
+    mp4boxArgs = mp4boxArgs 
     for resolution in resolutions:
         mp4boxArgs = mp4boxArgs + [outputDir + videoBasename + "_" + str(resolution) +"p.mp4#video:role=main"]
     
