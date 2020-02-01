@@ -155,8 +155,12 @@ def package(content):
         shutil.rmtree(outputDir)
     os.mkdir(outputDir)
     videoBasename = os.path.splitext(os.path.basename(videoFile))[0]
-
-    videoFile = download(workdir, videoFile)
+    try:
+        videoFile = download(workdir, videoFile)
+    except Exception:
+        sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not download " + videoFile } )
+        return
+    
     for resolution in resolutions:
         print("Transcoding the resolution " + str(resolution))
         args = ["ffmpeg", "-y", "-i", videoFile, "-an",
@@ -168,7 +172,7 @@ def package(content):
         if ret!= 0:
             shutil.rmtree(workdir)
             sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not transcode the base video" } )
-
+            return
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
 
     audios = [ {'url': videoFile, 'urn:mpeg:dash:role:2011': 'main'}]
@@ -187,12 +191,16 @@ def package(content):
         #for signer in signers:
         #Only use the first SL for now
         signerFile = signer["url"] + "/index.xml"
+        try:
+            signerFile = download(workdir, signerFile)
+        except Exception:
+            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not download " + signerFile } )
+            return
 
-        signerFile = download(workdir, signerFile)
         if not os.path.isfile(signerFile):
             shutil.rmtree(workdir)
             sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "The SL couldn't be fetched" } )
-
+            return
         signerTree=ET.parse(signerFile)
         signerRoot=signerTree.getroot()
 
@@ -200,7 +208,11 @@ def package(content):
 
         for el in signerRoot.iter():
             if el.tag == "video":
-                vid = download(workdir,  signer["url"] +  el.get("src"))
+                try:
+                    vid = download(workdir,  signer["url"] +  el.get("src"))
+                except Exception:
+                    sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not download " + signer["url"] +  el.get("src") } )
+                    return
                 slVids = slVids + [{"id" : el.get("{http://www.w3.org/XML/1998/namespace}id"), "begin": el.get("begin"), "end": el.get("end"), "file": vid}]
                 #suppose we are at 600x600
 
@@ -246,7 +258,11 @@ def package(content):
         mp4boxArgs = mp4boxArgs + [outputDir + videoBasename + "_" + str(resolution) +"p.mp4#video:role=main"]
     
     for audio in audios:
-        f = download(outputDir, audio["url"])
+        try:
+            f = download(outputDir, audio["url"])
+        except Exception:
+            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not download " +  audio["url"]} )
+            return
         if f.endswith(".aac"):
             arg = ["MP4Box", "-add", f, f.replace(".aac", ".mp4")]
             subprocess.call(arg)
@@ -268,12 +284,17 @@ def package(content):
         print(' '.join(mp4boxArgs))
         shutil.rmtree(workdir)
         sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Couldn't DASH the assets" } )
-
+        return
+        
     tree=ET.parse(outputDir + "manifest.mpd")
     root=tree.getroot()
 
     for i, sub in enumerate(subtitles):
-        subFile = download(outputDir, sub["url"])
+        try:
+            subFile = download(outputDir, sub["url"])
+        except Exception:
+            sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not download " +  sub["url"]} )
+            return
         basename = os.path.splitext(os.path.basename(sub["url"]))[0]
         extension = os.path.splitext(os.path.basename(sub["url"]))[1]
         for item in root.findall('{urn:mpeg:dash:schema:mpd:2011}Period'):
