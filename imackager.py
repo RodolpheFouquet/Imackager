@@ -274,7 +274,11 @@ def package(content):
 
     # Fix once we have all SL segments
     for sl in sls:
-        mp4boxArgs = mp4boxArgs + [ sl["file"] + "#video:role="+ sl["role"]]
+        sl["manifest"] = os.path.basename (sl["file"]) + ".mpd"
+        mp4boxArgsSL = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + sl["manifest"]]
+        mp4boxArgsSL = mp4boxArgsSL + [ sl["file"] + "#video:role="+ sl["role"]]
+        subprocess.call(mp4boxArgsSL)
+
     if os.path.isfile(outputDir + videoBasename):
         print("Video exists")
     print(' '.join(mp4boxArgs))
@@ -335,6 +339,12 @@ def package(content):
                     base = os.path.splitext(os.path.basename(s["url"]))[0]
                     ext = os.path.splitext(os.path.basename(s["url"]))[1]
                     subs[0][acc]= "https://imac.gpac-licensing.com/dash/" + dirName +base+ext 
+    slDic = [dict()]
+    if "SL" in content["acces"]:
+        for acc in content["acces"]["SL"]:
+            for s in sls:
+                if s["language"] == acc:
+                    slDic[0][acc]= "https://imac.gpac-licensing.com/dash/" + dirName + s["manifest"]
 
 
 
@@ -345,7 +355,7 @@ def package(content):
         "url": "https://imac.gpac-licensing.com/dash/" + dirName + "manifest.mpd",
         "audioChannels" : 4,
         "subtitles": subs,
-        "signer": [],
+        "signer": slDic,
         "ad": [],
         "ast": []
     })
