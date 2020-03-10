@@ -226,7 +226,7 @@ def package(content):
         
         #TODO: trim if diff < threshold
         for i in range(len(segments)):
-            args = ["ffmpeg", "-y", "-i", slVids[0]["file"], "-ss",  segments[i]["begin"], "-to", segments[i]["end"],  "-filter:v", 'crop=ih:ih,scale=300:300,fps=fps=30', "-bf", "0", "-crf", "22", "-c:v",
+            args = ["ffmpeg", "-y", "-i", slVids[0]["file"], "-ss",  segments[i]["begin"], "-to", segments[i]["end"],  "-filter:v", 'crop=ih:ih,scale=600:600,fps=fps=30', "-bf", "0", "-crf", "22", "-c:v",
             "libx264", "-keyint_min", "60", "-g", "60", "-sc_threshold", "0","-write_tmcd", "0", "-an", segments[i]["file"]]
             ret = subprocess.call(args)
         blanks = []
@@ -235,7 +235,7 @@ def package(content):
                 duration = (tcToMilliseconds(segments[i+1]["begin"]) - tcToMilliseconds(segments[i]["end"]))/1000.0
                 blank = workdir + segments[i]["id"] + "_" + segments[i+1]["id"] + ".mp4"
                 blanks = blanks + [blank]
-                args = ["ffmpeg", "-t", str(duration), '-f', 'lavfi', '-i', 'color=c=black:s=300x300:rate=30', '-c:v', 'libx264', '-tune', 'stillimage', '-pix_fmt', 'yuv420p', blank]
+                args = ["ffmpeg", "-t", str(duration), '-f', 'lavfi', '-i', 'color=c=black:s=600x600:rate=30', '-c:v', 'libx264', '-tune', 'stillimage', '-pix_fmt', 'yuv420p', blank]
                 ret = subprocess.call(args)
 
         playlist = "# playlist to concatenate"
@@ -272,12 +272,6 @@ def package(content):
         else:
             mp4boxArgs = mp4boxArgs + [f+"#audio:role="+audio["urn:mpeg:dash:role:2011"]]
 
-    # Fix once we have all SL segments
-    for sl in sls:
-        sl["manifest"] = os.path.basename (sl["file"]) + ".mpd"
-        mp4boxArgsSL = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + sl["manifest"]]
-        mp4boxArgsSL = mp4boxArgsSL + [ sl["file"] + "#video:role="+ sl["role"]]
-        subprocess.call(mp4boxArgsSL)
 
     if os.path.isfile(outputDir + videoBasename):
         print("Video exists")
@@ -292,6 +286,33 @@ def package(content):
         
     tree=ET.parse(outputDir + "manifest.mpd")
     root=tree.getroot()
+
+    # Fix once we have all SL segments
+    for sl in sls:
+        sl["manifest"] = os.path.basename (sl["file"]) + ".mpd"
+        mp4boxArgsSL = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + sl["manifest"]]
+        mp4boxArgsSL = mp4boxArgsSL + [ sl["file"] + "#video:role="+ sl["role"]]
+        subprocess.call(mp4boxArgsSL)
+        for item in root.findall('{urn:mpeg:dash:schema:mpd:2011}Period'):
+            AS = ET.Element("AdaptationSet")
+            AS.set("contentType", "video")
+            AS.set("id","signerVideo_" +  mapLang(sl["language"]))
+            AS.set("lang", "sgn-"+mapLang(sl["language"]))
+            supp = ET.Element("SupplementalProperty")
+            supp.set("schemeIdUri", "urn:imac:signer-metadata-adaptation-set-id:2019")
+            supp.set("value","signerMetadata_" +  mapLang(sl["language"]))
+            AS.append(supp)
+            role = ET.Element("Role")
+            role.set("schemeIdUri", "urn:mpeg:dash:role:2011")
+            role.set("value", "sign") #until fixed in the ACM
+            AS.append(role)
+            representation = ET.Element("Representation")
+            representation.set("id", "signer_600")
+            BaseURL = ET.Element("BaseURL")
+            BaseURL.text = sl["manifest"]
+            AS.append(representation)
+            item.append(AS)
+            print("Sign language added")
 
     for i, sub in enumerate(subtitles):
         try:
