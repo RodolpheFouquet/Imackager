@@ -229,14 +229,15 @@ def package(content):
             args = ["ffmpeg", "-y", "-i", slVids[0]["file"], "-ss",  segments[i]["begin"], "-to", segments[i]["end"],  "-filter:v", 'crop=ih:ih,scale=600:600,fps=fps=30', "-bf", "0", "-crf", "22", "-c:v",
             "libx264", "-keyint_min", "60", "-g", "60", "-sc_threshold", "0","-write_tmcd", "0", "-an", segments[i]["file"]]
             ret = subprocess.call(args)
-        blanks = []
+        blanks = ["" for i in range(len(segments))]
         for i in range(len(segments)):
             if i < len(segments)-1:
                 duration = (tcToMilliseconds(segments[i+1]["begin"]) - tcToMilliseconds(segments[i]["end"]))/1000.0
-                blank = workdir + segments[i]["id"] + "_" + segments[i+1]["id"] + ".mp4"
-                blanks = blanks + [blank]
-                args = ["ffmpeg", "-t", str(duration), '-f', 'lavfi', '-i', 'color=c=black:s=600x600:rate=30', '-c:v', 'libx264', '-tune', 'stillimage', '-pix_fmt', 'yuv420p', blank]
-                ret = subprocess.call(args)
+                if duration >0:
+                    blank = workdir + segments[i]["id"] + "_" + segments[i+1]["id"] + ".mp4"
+                    blanks[i] = blank
+                    args = ["ffmpeg", "-t", str(duration), '-f', 'lavfi', '-i', 'color=c=black:s=600x600:rate=30', '-c:v', 'libx264', '-tune', 'stillimage', '-pix_fmt', 'yuv420p', blank]
+                    ret = subprocess.call(args)
 
         playlist = "# playlist to concatenate"
         for i in range(len(segments)): 
