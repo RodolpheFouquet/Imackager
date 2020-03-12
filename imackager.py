@@ -20,10 +20,10 @@ from threading import Thread
 
 app = Flask(__name__)
 
-packagedDir= "/var/www/dash/"
-#packagedDir= "dash/"
-#jsonBDD= "./content.json"
-jsonBDD= "/var/www/html/playertest/content.json"
+#packagedDir= "/var/www/dash/"
+packagedDir= "dash/"
+jsonBDD= "./content.json"
+#jsonBDD= "/var/www/html/playertest/content.json"
 
 class InvalidUsage(Exception):
     status_code = 400
@@ -148,7 +148,6 @@ def package(content):
         content["language"] = "Español"
     else:
         content["language"] = "English"
-
     dirName = str(content["assetId"]) +"/"
     outputDir = packagedDir + dirName
     if os.path.isdir(outputDir):
@@ -209,7 +208,7 @@ def package(content):
         for el in signerRoot.iter():
             if el.tag == "video":
                 try:
-                    vid = download(workdir,  signer["url"] +  el.get("src"))
+                    vid = download(workdir,  signer["url"] + el.get("src"))
                 except Exception:
                     sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not download " + signer["url"] +  el.get("src") } )
                     return
@@ -226,6 +225,7 @@ def package(content):
         
         #TODO: trim if diff < threshold
         for i in range(len(segments)):
+            print("cutting between " +segments[i]["begin"] + " and "+ segments[i]["end"])
             args = ["ffmpeg", "-y", "-i", slVids[0]["file"], "-ss",  segments[i]["begin"], "-to", segments[i]["end"],  "-filter:v", 'crop=ih:ih,scale=600:600,fps=fps=30', "-bf", "0", "-crf", "22", "-c:v",
             "libx264", "-keyint_min", "60", "-g", "60", "-sc_threshold", "0","-write_tmcd", "0", "-an", segments[i]["file"]]
             ret = subprocess.call(args)
@@ -242,9 +242,10 @@ def package(content):
         playlist = "# playlist to concatenate"
         for i in range(len(segments)): 
             playlist = playlist+ "\n file '" + segments[i]["file"] +"'"
-            if i < len(segments)-1:
+            if i < len(segments)-1 and  blanks[i] != "":
                 playlist = playlist + "\n file '" + blanks[i] +"'"
-
+        print("Encoding sign language stuff")
+        print(playlist)
         with open(workdir + "/list.txt", "w") as f:
             f.write(playlist)
         outsl = workdir + "/sl"  + signer["language"] +".mp4"
@@ -311,6 +312,7 @@ def package(content):
             representation.set("id", "signer_600")
             BaseURL = ET.Element("BaseURL")
             BaseURL.text = sl["manifest"]
+            representation.append(BaseURL)
             AS.append(representation)
             item.append(AS)
             print("Sign language added")
