@@ -108,6 +108,20 @@ def mapLang(lang):
     else:
         return lang
 
+def mapLangSL(lang):
+    if lang.startswith( 'ca_' ):
+        return "csc"
+    elif lang.startswith( 'en_US' ):
+        return "ase"
+    elif lang.startswith( 'en_' ):
+        return "bfi"
+    elif lang.startswith( 'de_' ):
+        return "gsg"
+    elif lang.startswith( 'es_' ):
+        return "ssp"
+    else:
+        return lang
+
 def mapLang2(lang):
     if lang.startswith( 'ca_' ):
         return "ca"
@@ -299,7 +313,7 @@ def package(content):
             AS = ET.Element("AdaptationSet")
             AS.set("contentType", "video")
             AS.set("id","signerVideo_" +  mapLang(sl["language"]))
-            AS.set("lang", "sgn-"+mapLang(sl["language"]))
+            AS.set("lang", "sgn-"+mapLangSL(sl["language"]))
             supp = ET.Element("SupplementalProperty")
             supp.set("schemeIdUri", "urn:imac:signer-metadata-adaptation-set-id:2019")
             supp.set("value","signerMetadata_" +  mapLang(sl["language"]))
