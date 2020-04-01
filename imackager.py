@@ -17,6 +17,7 @@ import json
 from pprint import pprint
 from shutil import copyfile
 from threading import Thread
+from itertools import groupby
 
 app = Flask(__name__)
 
@@ -90,6 +91,18 @@ def callback():
     pprint(content)
     return "ok"
 
+
+def removeDupicates(p):
+    lines = []
+    with open(p) as f:
+        content = f.readlines()
+        lines = [x[0] for x in groupby(content)]
+
+    outF = open(p, "w")
+    for line in lines:
+        outF.write(line)
+    outF.close()
+
 def sendResp(url, resp):
     params = json.dumps(resp).encode('utf8')
     req = urllib.request.Request(url, data=params,
@@ -97,39 +110,39 @@ def sendResp(url, resp):
     response = urllib.request.urlopen(req)
 
 def mapLang(lang):
-    if lang.startswith( 'ca_' ):
+    if lang.startswith( 'ca' ):
         return "cat"
-    if lang.startswith( 'en_' ):
+    if lang.startswith( 'en' ):
         return "eng"
-    if lang.startswith( 'de_' ):
+    if lang.startswith( 'de' ):
         return "deu"
-    if lang.startswith( 'es_' ):
+    if lang.startswith( 'es' ):
         return "esp"
     else:
         return lang
 
 def mapLangSL(lang):
-    if lang.startswith( 'ca_' ):
+    if lang.startswith( 'ca' ):
         return "csc"
     elif lang.startswith( 'en_US' ):
         return "ase"
-    elif lang.startswith( 'en_' ):
+    elif lang.startswith( 'en' ):
         return "bfi"
-    elif lang.startswith( 'de_' ):
+    elif lang.startswith( 'de' ):
         return "gsg"
-    elif lang.startswith( 'es_' ):
+    elif lang.startswith( 'es' ):
         return "ssp"
     else:
         return lang
 
 def mapLang2(lang):
-    if lang.startswith( 'ca_' ):
+    if lang.startswith( 'ca' ):
         return "ca"
-    if lang.startswith( 'en_' ):
+    if lang.startswith( 'en' ):
         return "en"
-    if lang.startswith( 'de_' ):
+    if lang.startswith( 'de' ):
         return "de"
-    if lang.startswith( 'es_' ):
+    if lang.startswith( 'es' ):
         return "es"
     else:
         return lang
@@ -151,7 +164,7 @@ def package(content):
     print(content)
     resolutions = content["files"]["mainVideo"][0]["transcode"]
     videoFile = content["files"]["mainVideo"][0]["url"]
-
+    originalLang =content["language"] 
     if content["language"] == "de":
         content["language"] = "Deutsch"
     elif content["language"] == "fr":
@@ -188,10 +201,9 @@ def package(content):
             return
     mp4boxArgs = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + "manifest.mpd"]
 
-    audios = [ {'url': videoFile, 'urn:mpeg:dash:role:2011': 'main'}]
+    audios = [ {'url': videoFile, 'urn:mpeg:dash:role:2011': 'main', 'language':  mapLang(originalLang)}]
     if "audio" in content["files"]:
         for a in content["files"]["audio"]:
-            if a["urn:mpeg:dash:role:2011"] == "main":
                 audios = audios + [a]
     subtitles = []
     if "subtitle" in content["files"]:
@@ -280,9 +292,16 @@ def package(content):
             sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not download " +  audio["url"]} )
             return
         if f.endswith(".aac"):
-            arg = ["MP4Box", "-add", f, f.replace(".aac", ".mp4")]
+            arg = ["MP4Box", "-add", f, f+".mp4"]
             subprocess.call(arg)
-            mp4boxArgs = mp4boxArgs + [f.replace(".aac", ".mp4")+"#audio:role="+audio["urn:mpeg:dash:role:2011"]]
+            # set the correct language
+            arg = ["MP4Box", "-lang", mapLang(audio["language"]), f+".mp4"]
+            subprocess.call(arg)
+            mp4boxArgs = mp4boxArgs + [ f+".mp4"+"#audio:role="+audio["urn:mpeg:dash:role:2011"]]
+        elif  f.endswith(".mp4"):
+            arg = ["MP4Box", "-lang", mapLang(audio["language"]), f]
+            subprocess.call(arg)
+            mp4boxArgs = mp4boxArgs + [f+"#audio:role="+audio["urn:mpeg:dash:role:2011"]]
         elif f.endswith(".ad"): #TODO extract & stuff
             continue
         else:
@@ -358,15 +377,33 @@ def package(content):
             AS.append(representation)
             item.append(AS)
             print("Subtitle added")
+
+    ases = root.findall(".//{urn:mpeg:dash:schema:mpd:2011}Period/{urn:mpeg:dash:schema:mpd:2011}AdaptationSet")
+    for AS in ases:
+        if AS.find("{urn:mpeg:dash:schema:mpd:2011}Role").get("value") == "alternate":
+            reps = AS.findall("{urn:mpeg:dash:schema:mpd:2011}Representation")
+            for rep in reps:
+                print(rep.find("{urn:mpeg:dash:schema:mpd:2011}SegmentTemplate").get("media"))
+                for audio in content["files"]["audio"]:
+                    if audio["containsAD"] == "1" and os.path.splitext(os.path.basename(audio["url"]))[0] in  rep.find("{urn:mpeg:dash:schema:mpd:2011}SegmentTemplate").get("media"):
+                        print(os.path.splitext(os.path.basename(audio["url"]))[0])
+                        print( os.path.splitext(os.path.basename(audio["url"]))[0] in  rep.find("{urn:mpeg:dash:schema:mpd:2011}SegmentTemplate").get("media"))
+                        rep.set("imac:audioDescriptionGain", audio["ADgain"])
+                        if "classic" in os.path.splitext(os.path.basename(audio["url"]))[0]:
+                            rep.set("imac:audioMode", "classic")
+                        elif "static" in os.path.splitext(os.path.basename(audio["url"]))[0]:
+                            rep.set("imac:audioMode", "static")
+                        elif "dynamic" in os.path.splitext(os.path.basename(audio["url"]))[0]:
+                            rep.set("imac:audioMode", "dynamic")
+                        break
     ET.register_namespace('', "urn:mpeg:dash:schema:mpd:2011")
     #tree.write(outputDir + "manifest.mpd", xml_declaration=True)
     print("Writing manifest")
-    with open(outputDir+ "manifest.mpd", "w") as xmlfile:
-        x = minidom.parseString(ET.tostring(root))
-        remove_blanks(x)
-        x.normalize()
-        xmlfile.write(x.toprettyxml(indent="  "))
+    with open(outputDir+ "manifest.mpd", "wb") as xmlfile:
+        mydata = ET.tostring(root)
+        xmlfile.write(mydata)
 
+    removeDupicates(outputDir+ "manifest.mpd")
     with open(jsonBDD) as f:
         data = json.load(f)
     subs = [dict()]
