@@ -62,27 +62,27 @@ def escape(u):
         url = r.geturl()
         return url
 
-def download(workdir, u):
+def download(workdir, u, custom_extension = ""):
     if (u.startswith('http://')) or (u.startswith('https://')):
-        p = urlparse(u)
-        r = p._replace(path=urllib.parse.quote(p.path))
-        url = r.geturl()
-        print("Downloading " + url)
+       # p = urlparse(u)
+       # r = p._replace(path=urllib.parse.quote(p.path))
+       # url = r.geturl()
         basename = os.path.splitext(os.path.basename(u))[0]
         extension = os.path.splitext(os.path.basename(u))[1]
+        print("Downloading " + u+ " to " + workdir + basename + custom_extension+ extension)
 	
-        urllib.request.urlretrieve (url, workdir + basename +  extension)
-        print(url + " downloaded")
-        return workdir + basename + extension
+        urllib.request.urlretrieve (u, workdir + basename + custom_extension+  extension)
+        print(u + " downloaded")
+        return workdir + basename +custom_extension+ extension
     else:
         url = u
         print("Copying " + url)
         basename = os.path.splitext(os.path.basename(url))[0]
         extension = os.path.splitext(os.path.basename(url))[1]
 
-        copyfile(url, workdir + basename +  extension)
+        copyfile(url, workdir + basename + custom_extension +extension)
         print(url + " copied")
-        return workdir + basename +  extension
+        return workdir + basename + custom_extension + extension
 
 
 @app.route("/test_callback", methods=["POST"])
@@ -183,7 +183,8 @@ def package(content):
     videoBasename = os.path.splitext(os.path.basename(videoFile))[0]
     try:
         videoFile = download(workdir, videoFile)
-    except Exception:
+    except Exception as err:
+        print(err)
         sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not download " + videoFile } )
         return
     
@@ -287,15 +288,15 @@ def package(content):
     
     for audio in audios:
         try:
-            f = download(outputDir, audio["url"])
+            f = download(outputDir, audio["url"], "-" + audio["language"])
         except Exception:
             sendResp(content["callbackUrl"], {"result":0, "assetId":content["assetId"], "language": content["language"], "msg":  "Could not download " +  audio["url"]} )
             return
         if f.endswith(".aac"):
-            arg = ["MP4Box", "-add", f, f+".mp4"]
+            arg = ["MP4Box", "-add", f, f.replace(".", "-")+".mp4"]
             subprocess.call(arg)
             # set the correct language
-            arg = ["MP4Box", "-lang", mapLang(audio["language"]), f+".mp4"]
+            arg = ["MP4Box", "-lang", mapLang(audio["language"]), f.replace(".", "-")+".mp4"]
             subprocess.call(arg)
             mp4boxArgs = mp4boxArgs + [ f+".mp4"+"#audio:role="+audio["urn:mpeg:dash:role:2011"]]
         elif  f.endswith(".mp4"):
@@ -324,7 +325,7 @@ def package(content):
 
     # Fix once we have all SL segments
     for sl in sls:
-        sl["manifest"] = os.path.basename (sl["file"]) + ".mpd"
+        sl["manifest"] = os.path.basename (sl["file"]).replace(".mp4", "") + ".mpd"
         mp4boxArgsSL = ["MP4Box", "-dash", "2000", "-profile", "live",  "-out", outputDir + sl["manifest"]]
         mp4boxArgsSL = mp4boxArgsSL + [ sl["file"] + "#video:role="+ sl["role"]]
         subprocess.call(mp4boxArgsSL)
@@ -378,6 +379,7 @@ def package(content):
             item.append(AS)
             print("Subtitle added")
 
+    hasAD=False
     ases = root.findall(".//{urn:mpeg:dash:schema:mpd:2011}Period/{urn:mpeg:dash:schema:mpd:2011}AdaptationSet")
     for AS in ases:
         if AS.find("{urn:mpeg:dash:schema:mpd:2011}Role").get("value") == "alternate":
@@ -386,17 +388,20 @@ def package(content):
                 print(rep.find("{urn:mpeg:dash:schema:mpd:2011}SegmentTemplate").get("media"))
                 for audio in content["files"]["audio"]:
                     if audio["containsAD"] == "1" and os.path.splitext(os.path.basename(audio["url"]))[0] in  rep.find("{urn:mpeg:dash:schema:mpd:2011}SegmentTemplate").get("media"):
-                        print(os.path.splitext(os.path.basename(audio["url"]))[0])
-                        print( os.path.splitext(os.path.basename(audio["url"]))[0] in  rep.find("{urn:mpeg:dash:schema:mpd:2011}SegmentTemplate").get("media"))
-                        rep.set("imac:audioDescriptionGain", audio["ADgain"])
+                        hasAD = True 
+                        ad = ET.Element("AudioDescription")
+                        ad.set("gain", audio["ADgain"])
                         if "classic" in os.path.splitext(os.path.basename(audio["url"]))[0]:
-                            rep.set("imac:audioMode", "classic")
+                            ad.set("mode", "classic")
                         elif "static" in os.path.splitext(os.path.basename(audio["url"]))[0]:
-                            rep.set("imac:audioMode", "static")
+                            ad.set("mode", "static")
                         elif "dynamic" in os.path.splitext(os.path.basename(audio["url"]))[0]:
-                            rep.set("imac:audioMode", "dynamic")
+                            ad.set("mode", "dynamic")
                         break
+                        rep.append(ad)
     ET.register_namespace('', "urn:mpeg:dash:schema:mpd:2011")
+    if hasAD:
+        ET.register_namespace('imac', "urn:imac:audio-description:2019")
     #tree.write(outputDir + "manifest.mpd", xml_declaration=True)
     print("Writing manifest")
     with open(outputDir+ "manifest.mpd", "wb") as xmlfile:
@@ -424,7 +429,32 @@ def package(content):
 
 
     data["contents"].append({
-        "acces":content["acces"], "descriptionArray":content["descriptionArray"],  
+        "acces":content["acces"], "descriptionArray":[content["descriptionArray"]],  
+        "name": str(len(data["contents"])+1) + ": " + content["programmeName"],
+        "thumbnail": content["keyframe"],
+        "url": "https://imac.gpac-licensing.com/dash2/" + dirName + "manifest.mpd",
+        "audioChannels" : 4,
+        "subtitles": subs,
+        "signer": slDic,
+        "ad": [],
+        "ast": []
+    })
+
+    print("Writing json database")
+    with open(jsonBDD, 'w') as outfile:
+        json.dump(data, outfile, indent=2)
+
+    shutil.rmtree(workdir)
+    sendResp(content["callbackUrl"], {"result":1, "assetId":content["assetId"], "language": content["language"], "msg":  "The content has been successfully packaged" } )
+
+@app.route("/package", methods=["POST"])
+def add_message():
+    content = request.json
+    process = Thread(target=package, args=[content])
+    process.start()
+    return "Packaging started"
+
+
         "name": str(len(data["contents"])+1) + ": " + content["programmeName"],
         "thumbnail": content["keyframe"],
         "url": "https://imac.gpac-licensing.com/dash/" + dirName + "manifest.mpd",
