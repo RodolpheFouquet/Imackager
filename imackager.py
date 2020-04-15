@@ -21,10 +21,6 @@ from itertools import groupby
 
 app = Flask(__name__)
 
-#packagedDir= "/var/www/dash/"
-packagedDir= "dash/"
-jsonBDD= "./content.json"
-#jsonBDD= "/var/www/html/playertest/content.json"
 
 class InvalidUsage(Exception):
     status_code = 400
@@ -161,7 +157,8 @@ def tcToMilliseconds(timecode):
 def package(content):
     workdir = "/tmp/" + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)) + "/"
     os.mkdir(workdir)
-    print(content)
+    packagedDir = content["publicationCdn"]
+    jsonBDD = content["publicationFile"].replace("https://imac.gpac-licensing.com/", "/var/www/html/")
     resolutions = content["files"]["mainVideo"][0]["transcode"]
     videoFile = content["files"]["mainVideo"][0]["url"]
     originalLang =content["language"] 
@@ -454,28 +451,4 @@ def add_message():
     process.start()
     return "Packaging started"
 
-
-        "name": str(len(data["contents"])+1) + ": " + content["programmeName"],
-        "thumbnail": content["keyframe"],
-        "url": "https://imac.gpac-licensing.com/dash/" + dirName + "manifest.mpd",
-        "audioChannels" : 4,
-        "subtitles": subs,
-        "signer": slDic,
-        "ad": [],
-        "ast": []
-    })
-
-    print("Writing json database")
-    with open(jsonBDD, 'w') as outfile:
-        json.dump(data, outfile, indent=2)
-
-    shutil.rmtree(workdir)
-    sendResp(content["callbackUrl"], {"result":1, "assetId":content["assetId"], "language": content["language"], "msg":  "The content has been successfully packaged" } )
-
-@app.route("/package", methods=["POST"])
-def add_message():
-    content = request.json
-    process = Thread(target=package, args=[content])
-    process.start()
-    return "Packaging started"
 
