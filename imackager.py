@@ -157,7 +157,7 @@ def tcToMilliseconds(timecode):
 def package(content):
     workdir = "/tmp/" + ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10)) + "/"
     os.mkdir(workdir)
-    packagedDir = content["publicationCdn"]
+    packagedDir = content["publicationCdn"] + "/"
     jsonBDD = content["publicationFile"].replace("https://imac.gpac-licensing.com/", "/var/www/html/")
     resolutions = content["files"]["mainVideo"][0]["transcode"]
     videoFile = content["files"]["mainVideo"][0]["url"]
@@ -405,6 +405,10 @@ def package(content):
         mydata = ET.tostring(root)
         xmlfile.write(mydata)
 
+    isDash2 = "dash2" in content["publicationCdn"]
+    directory = "dash"
+    if isDash2:
+        directory = directory + "2"
     removeDupicates(outputDir+ "manifest.mpd")
     with open(jsonBDD) as f:
         data = json.load(f)
@@ -415,13 +419,13 @@ def package(content):
                 if s["language"] == acc:
                     base = os.path.splitext(os.path.basename(s["url"]))[0]
                     ext = os.path.splitext(os.path.basename(s["url"]))[1]
-                    subs[0][acc]= "https://imac.gpac-licensing.com/dash/" + dirName +base+ext 
+                    subs[0][acc]= "https://imac.gpac-licensing.com/" + directory + "/" + dirName +base+ext 
     slDic = [dict()]
     if "SL" in content["acces"]:
         for acc in content["acces"]["SL"]:
             for s in sls:
                 if s["language"] == acc:
-                    slDic[0][acc]= "https://imac.gpac-licensing.com/dash/" + dirName + s["manifest"]
+                    slDic[0][acc]= "https://imac.gpac-licensing.com/"+ directory+ "/" + dirName + s["manifest"]
 
 
 
@@ -429,10 +433,11 @@ def package(content):
         "acces":content["acces"], "descriptionArray":[content["descriptionArray"]],  
         "name": str(len(data["contents"])+1) + ": " + content["programmeName"],
         "thumbnail": content["keyframe"],
-        "url": "https://imac.gpac-licensing.com/dash2/" + dirName + "manifest.mpd",
+        "url": "https://imac.gpac-licensing.com"+ directory+"/" + dirName + "manifest.mpd",
         "audioChannels" : 4,
         "subtitles": subs,
         "signer": slDic,
+        "poster": content["poster"],
         "ad": [],
         "ast": []
     })
@@ -450,5 +455,4 @@ def add_message():
     process = Thread(target=package, args=[content])
     process.start()
     return "Packaging started"
-
 
